@@ -1,14 +1,12 @@
-// src/app/auth/login/page.tsx
+/// src/app/auth/login/page.tsx
 'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Leaf, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
@@ -29,17 +27,14 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
-    router.refresh()
+    window.location.href = '/dashboard'
   }
 
   return (
     <div className="min-h-screen bg-[#0f1a0f] flex items-center justify-center px-4">
-      {/* Gradiente de fundo */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a2e1a] via-[#0f1a0f] to-[#0a120a] pointer-events-none" />
 
       <div className="relative w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-3">
             <div className="w-10 h-10 bg-[#4caf50] rounded-lg flex items-center justify-center">
@@ -50,7 +45,6 @@ export default function LoginPage() {
           <p className="text-[#6b8f6b] text-sm">Plataforma de Rastreabilidade EUDR</p>
         </div>
 
-        {/* Card */}
         <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-8 shadow-2xl">
           <h1 className="text-xl font-semibold text-white mb-1">Entrar na plataforma</h1>
           <p className="text-[#6b8f6b] text-sm mb-6">Acesse sua conta para continuar</p>
@@ -63,9 +57,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">
-                E-mail
-              </label>
+              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">E-mail</label>
               <input
                 type="email"
                 value={email}
@@ -77,9 +69,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">
-                Senha
-              </label>
+              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">Senha</label>
               <input
                 type="password"
                 value={password}
