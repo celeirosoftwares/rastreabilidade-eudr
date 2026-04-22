@@ -1,9 +1,10 @@
+// middleware.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
+ 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
-
+ 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,27 +25,27 @@ export async function middleware(request: NextRequest) {
       },
     }
   )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
+ 
+  const { data: { session } } = await supabase.auth.getSession()
+ 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   const isPublicRoute = request.nextUrl.pathname === '/'
-
-  if (!user && !isAuthRoute && !isPublicRoute) {
+ 
+  if (!session && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
-
-  if (user && isAuthRoute) {
+ 
+  if (session && isAuthRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
-
+ 
   return supabaseResponse
 }
-
+ 
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
