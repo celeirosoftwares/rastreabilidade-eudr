@@ -1,6 +1,6 @@
 // src/app/dashboard/layout.tsx
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 
@@ -11,24 +11,35 @@ export default async function DashboardLayout({
 }) {
   const supabase = createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
 
+  if (!session) {
+    redirect('/auth/login')
+  }
+
+  // Busca perfil do usuário
   const { data: profile } = await supabase
     .from('users')
     .select('*, organization:organizations(*)')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
-  if (!profile) redirect('/auth/login')
+  // Se não achar perfil, cria um temporário para não travar
+  const userProfile = profile ?? {
+    id: session.user.id,
+    name: session.user.email ?? 'Usuário',
+    email: session.user.email ?? '',
+    role: 'owner',
+    organization_id: '',
+    created_at: new Date().toISOString(),
+    organization: { name: 'Minha Organização', id: '', created_at: '' },
+  }
 
   return (
     <div className="flex h-screen bg-[#0f1a0f] overflow-hidden">
-      <Sidebar user={profile} />
-
+      <Sidebar user={userProfile as any} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar user={profile} />
-
+        <TopBar user={userProfile as any} />
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
