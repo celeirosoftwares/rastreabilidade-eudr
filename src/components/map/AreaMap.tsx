@@ -3,9 +3,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
+// @ts-ignore
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const MapboxDraw = require('@mapbox/mapbox-gl-draw')
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { Ruler, Trash2, Info } from 'lucide-react'
 
