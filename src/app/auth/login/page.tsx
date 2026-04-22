@@ -1,33 +1,45 @@
-/// src/app/auth/login/page.tsx
+// src/app/auth/login/page.tsx
 'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Leaf, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const supabase = createClient()
-
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
 
-    if (error) {
-      setError('E-mail ou senha inválidos.')
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (authError || !data.session) {
+        setError('E-mail ou senha inválidos.')
+        setLoading(false)
+        return
+      }
+
+      // Força navegação completa após sessão estabelecida
+      setTimeout(() => {
+        window.location.replace('/dashboard')
+      }, 500)
+
+    } catch {
+      setError('Erro inesperado. Tente novamente.')
       setLoading(false)
-      return
     }
-
-    window.location.href = '/dashboard'
   }
 
   return (
@@ -52,6 +64,12 @@ export default function LoginPage() {
           {error && (
             <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-400 text-sm">
               {error}
+            </div>
+          )}
+
+          {loading && !error && (
+            <div className="mb-4 p-3 bg-green-900/30 border border-green-700/50 rounded-lg text-green-400 text-sm">
+              Login realizado! Redirecionando...
             </div>
           )}
 
