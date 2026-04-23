@@ -1,53 +1,55 @@
-// src/components/layout/TopBar.tsx
 'use client'
 
 import { usePathname } from 'next/navigation'
 import { Bell } from 'lucide-react'
-import type { User } from '@/types'
 
 const routeTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
+  '/dashboard':            'Dashboard',
   '/dashboard/properties': 'Propriedades',
-  '/dashboard/areas': 'Áreas',
-  '/dashboard/lots': 'Lotes de Produção',
-  '/dashboard/reports': 'Relatórios',
-  '/dashboard/settings': 'Configurações',
+  '/dashboard/areas':      'Áreas',
+  '/dashboard/lots':       'Lotes',
+  '/dashboard/reports':    'Relatórios',
+  '/dashboard/settings':   'Configurações',
 }
 
-interface TopBarProps {
-  user: User & { organization: { name: string } }
-}
-
-export default function TopBar({ user }: TopBarProps) {
+export default function TopBar({ user }: { user: any }) {
   const pathname = usePathname()
-
   const title = Object.entries(routeTitles)
     .filter(([route]) => pathname.startsWith(route))
     .sort((a, b) => b[0].length - a[0].length)[0]?.[1] ?? 'Dashboard'
 
+  const date = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
   return (
-    <header className="h-16 bg-[#111e11] border-b border-[#1e2e1e] flex items-center justify-between px-6 shrink-0">
+    <header style={{
+      height: '56px', flexShrink: 0,
+      background: 'var(--bg-surface)',
+      borderBottom: '1px solid var(--border-soft)',
+      display: 'flex', alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 24px',
+    }}>
       <div>
-        <h1 className="text-white font-semibold text-base">{title}</h1>
-        <p className="text-[#4d7a4d] text-xs">
-          {new Date().toLocaleDateString('pt-BR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
-        </p>
+        <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>{title}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'capitalize' }}>{date}</div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button className="relative w-9 h-9 rounded-lg bg-[#1e2e1e] hover:bg-[#2d3d2d] flex items-center justify-center transition-colors">
-          <Bell className="w-4 h-4 text-[#6b8f6b]" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#4caf50] rounded-full" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button style={{
+          width: '32px', height: '32px', borderRadius: '8px',
+          background: 'var(--bg-raised)', border: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+        }}>
+          <Bell size={14} color="var(--text-secondary)" />
         </button>
-
-        <div className="w-9 h-9 rounded-lg bg-[#2d5a2d] flex items-center justify-center">
-          <span className="text-[#4caf50] text-sm font-bold">
-            {user.name.charAt(0).toUpperCase()}
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '8px',
+          background: 'var(--bg-muted)', border: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>
+            {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
           </span>
         </div>
       </div>

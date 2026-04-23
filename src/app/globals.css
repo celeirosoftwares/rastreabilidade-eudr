@@ -1,40 +1,37 @@
-/* src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; padding: 0; margin: 0; }
+
+:root {
+  --bg-base:        #0d0f0d;
+  --bg-surface:     #141614;
+  --bg-raised:      #1a1d1a;
+  --bg-muted:       #1f231f;
+  --border:         #252925;
+  --border-soft:    #1e221e;
+  --text-primary:   #e8ece8;
+  --text-secondary: #7a8a7a;
+  --text-muted:     #3d4d3d;
+  --accent:         #5a9e5a;
+  --accent-soft:    #3a6e3a;
+  --accent-glow:    rgba(90, 158, 90, 0.12);
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  background-color: #0f1a0f;
+html, body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Estilo customizado para inputs de data no tema escuro */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.5);
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Scrollbar customizada */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #111e11;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2d3d2d;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3d5a3d;
-}
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
+.font-mono { font-family: 'DM Mono', monospace; }
