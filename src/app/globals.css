@@ -32,6 +32,25 @@ html, body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
 .font-mono { font-family: 'DM Mono', monospace; }
+
+@media print {
+  /* Esconde tudo exceto o documento */
+  body { background: white !important; }
+  aside, header, .no-print { display: none !important; }
+  main { padding: 0 !important; overflow: visible !important; }
+  
+  /* O documento ocupa a página inteira */
+  #dds {
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    padding: 20mm 20mm !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    margin: 0;
+    size: A4;
+  }
+}
