@@ -5,14 +5,18 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Ruler, Layers } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import dynamic from 'next/dynamic'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import { useRef } from 'react'
 
-const AreaMap = dynamic(() => import('@/components/map/AreaMap'), { ssr: false })
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
 export default function AreaDetailPage() {
   const { id } = useParams()
   const [area, setArea] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<any>(null)
 
   useEffect(() => {
     async function load() {
@@ -27,6 +31,36 @@ export default function AreaDetailPage() {
     }
     load()
   }, [id])
+
+  useEffect(() => {
+    if (!area?.geojson || !mapContainer.current || mapRef.current) return
+
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      center: [-47.9292, -15.7801],
+      zoom: 5,
+    })
+
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+    map.on('load', () => {
+      map.addSource('area', { type: 'geojson', data: area.geojson })
+      map.addLayer({ id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': '#4caf50', 'fill-opacity': 0.3 } })
+      map.addLayer({ id: 'area-line', type: 'line', source: 'area', paint: { 'line-color': '#4caf50', 'line-width': 2 } })
+
+      // Zoom automático para o polígono
+      const coords = area.geojson.geometry.coordinates[0]
+      const bounds = coords.reduce(
+        (b: mapboxgl.LngLatBounds, c: number[]) => b.extend(c as [number, number]),
+        new mapboxgl.LngLatBounds(coords[0] as [number, number], coords[0] as [number, number])
+      )
+      map.fitBounds(bounds, { padding: 80 })
+    })
+
+    mapRef.current = map
+    return () => { map.remove(); mapRef.current = null }
+  }, [area])
 
   if (loading) return <div className="text-[#4d7a4d] text-sm">Carregando...</div>
   if (!area) return <div className="text-red-400 text-sm">Área não encontrada.</div>
@@ -55,15 +89,11 @@ export default function AreaDetailPage() {
                 <span>{Number(area.size_hectares).toFixed(2)} hectares</span>
               </div>
             )}
-            {area.land_use && (
-              <span className="text-xs text-[#6b8f6b]">{area.land_use}</span>
-            )}
+            {area.land_use && <span className="text-xs text-[#6b8f6b]">{area.land_use}</span>}
           </div>
         </div>
 
-        {area.geojson && (
-          <AreaMap initialGeojson={area.geojson} onPolygonChange={() => {}} readonly />
-        )}
+        <div ref={mapContainer} className="w-full h-[420px] rounded-xl overflow-hidden border border-[#2d3d2d]" />
       </div>
     </div>
   )
