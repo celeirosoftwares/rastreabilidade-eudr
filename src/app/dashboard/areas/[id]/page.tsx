@@ -1,20 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Ruler, Layers } from 'lucide-react'
+import { ArrowLeft, Ruler, Layers, MapPin, Copy, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { useRef } from 'react'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+
+const LAND_USE_LABELS: Record<string, string> = {
+  cultivation: 'Área de Cultivo', native: 'Vegetação Nativa',
+  arl: 'Reserva Legal (ARL)', app: 'Preservação Permanente (APP)', other: 'Outro',
+}
+
+function getCentroid(coords: number[][]): [number, number] {
+  const lat = coords.reduce((s, c) => s + c[1], 0) / coords.length
+  const lng = coords.reduce((s, c) => s + c[0], 0) / coords.length
+  return [lng, lat]
+}
 
 export default function AreaDetailPage() {
   const { id } = useParams()
   const [area, setArea] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
 
@@ -49,7 +60,6 @@ export default function AreaDetailPage() {
       map.addLayer({ id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': '#4caf50', 'fill-opacity': 0.3 } })
       map.addLayer({ id: 'area-line', type: 'line', source: 'area', paint: { 'line-color': '#4caf50', 'line-width': 2 } })
 
-      // Zoom automático para o polígono
       const coords = area.geojson.geometry.coordinates[0]
       const bounds = coords.reduce(
         (b: mapboxgl.LngLatBounds, c: number[]) => b.extend(c as [number, number]),
@@ -62,8 +72,19 @@ export default function AreaDetailPage() {
     return () => { map.remove(); mapRef.current = null }
   }, [area])
 
+  function copyCoords() {
+    if (!area?.geojson) return
+    const text = JSON.stringify(area.geojson.geometry.coordinates[0], null, 2)
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   if (loading) return <div className="text-[#4d7a4d] text-sm">Carregando...</div>
   if (!area) return <div className="text-red-400 text-sm">Área não encontrada.</div>
+
+  const coords = area.geojson?.geometry?.coordinates?.[0] ?? []
+  const centroid = coords.length > 0 ? getCentroid(coords) : null
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -77,24 +98,72 @@ export default function AreaDetailPage() {
         </div>
       </div>
 
-      <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-5">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-10 h-10 bg-blue-400/10 rounded-xl flex items-center justify-center">
-            <Layers className="w-5 h-5 text-blue-400" />
+      {/* Info cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Área', value: area.size_hectares ? `${Number(area.size_hectares).toFixed(2)} ha` : '—' },
+          { label: 'Uso do solo', value: LAND_USE_LABELS[area.land_use] ?? area.land_use ?? '—' },
+          { label: 'Vértices', value: coords.length > 0 ? `${coords.length - 1} pontos` : '—' },
+          { label: 'Centróide', value: centroid ? `${centroid[1].toFixed(5)}, ${centroid[0].toFixed(5)}` : '—' },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-[#172117] border border-[#2d3d2d] rounded-xl p-3">
+            <div className="text-[#6b8f6b] text-xs mb-1">{label}</div>
+            <div className="text-white text-sm font-medium break-all">{value}</div>
           </div>
-          <div>
-            {area.size_hectares && (
-              <div className="flex items-center gap-1.5 text-[#4caf50] text-sm">
-                <Ruler className="w-4 h-4" />
-                <span>{Number(area.size_hectares).toFixed(2)} hectares</span>
+        ))}
+      </div>
+
+      {/* Mapa */}
+      <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+            <Layers className="w-4 h-4 text-blue-400" /> Mapa da Área
+          </h3>
+          {area.size_hectares && (
+            <span className="flex items-center gap-1.5 text-[#4caf50] text-xs">
+              <Ruler className="w-3.5 h-3.5" />
+              {Number(area.size_hectares).toFixed(2)} hectares
+            </span>
+          )}
+        </div>
+        <div ref={mapContainer} className="w-full h-[400px] rounded-xl overflow-hidden border border-[#2d3d2d]" />
+      </div>
+
+      {/* Coordenadas */}
+      {coords.length > 0 && (
+        <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-[#4caf50]" /> Coordenadas do Polígono
+            </h3>
+            <button onClick={copyCoords}
+              className="flex items-center gap-1.5 text-xs text-[#6b8f6b] hover:text-white transition-colors">
+              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'Copiado!' : 'Copiar'}
+            </button>
+          </div>
+
+          {centroid && (
+            <div className="mb-3 p-3 bg-[#1e2e1e] rounded-lg">
+              <div className="text-[#6b8f6b] text-xs mb-1">Ponto central (centróide)</div>
+              <div className="text-white text-sm font-mono">
+                Lat: {centroid[1].toFixed(6)} | Lng: {centroid[0].toFixed(6)}
               </div>
-            )}
-            {area.land_use && <span className="text-xs text-[#6b8f6b]">{area.land_use}</span>}
+            </div>
+          )}
+
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {coords.slice(0, -1).map((coord: number[], i: number) => (
+              <div key={i} className="flex items-center gap-3 py-1.5 px-3 bg-[#1e2e1e] rounded-lg">
+                <span className="text-[#4d7a4d] text-xs w-6 shrink-0">#{i + 1}</span>
+                <span className="text-white text-xs font-mono">
+                  Lat: {coord[1].toFixed(6)} | Lng: {coord[0].toFixed(6)}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-
-        <div ref={mapContainer} className="w-full h-[420px] rounded-xl overflow-hidden border border-[#2d3d2d]" />
-      </div>
+      )}
     </div>
   )
 }
