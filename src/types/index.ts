@@ -1,14 +1,8 @@
-// ============================================================
-// Types globais da plataforma EUDR
-// ============================================================
-
 export type UserRole = 'owner' | 'admin' | 'member'
 export type LotStatus = 'active' | 'harvested' | 'sold' | 'archived'
 export type CropType = 'coffee' | 'soy' | 'sugarcane' | 'corn' | 'cotton' | 'other'
 export type EventType = 'planting' | 'harvest' | 'transport' | 'processing' | 'sale' | 'certification' | 'inspection'
 export type LandUse = 'cultivation' | 'native' | 'arl' | 'app' | 'other'
-
-// -------- Entidades principais --------
 
 export interface Organization {
   id: string
@@ -38,7 +32,6 @@ export interface Property {
   municipality: string | null
   created_at: string
   updated_at: string
-  // Relations
   areas?: Area[]
   lots?: Lot[]
 }
@@ -47,12 +40,11 @@ export interface Area {
   id: string
   property_id: string
   name: string
-  geojson: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>
+  geojson: any
   size_hectares: number | null
   land_use: LandUse | null
   created_at: string
   updated_at: string
-  // Relations
   property?: Property
 }
 
@@ -66,7 +58,6 @@ export interface Lot {
   metadata: LotMetadata
   created_at: string
   updated_at: string
-  // Relations
   property?: Property
   area?: Area
   events?: LotEvent[]
@@ -95,14 +86,12 @@ export interface Document {
   created_at: string
 }
 
-// -------- Metadata por cultura (JSONB flexível) --------
-
 export interface CoffeeMetadata {
   processing_type?: 'natural' | 'washed' | 'honey' | 'pulped_natural'
-  quality_score?: number         // 0–100 (SCA)
-  variety?: string               // Arabica, Robusta, Bourbon, etc.
+  quality_score?: number
+  variety?: string
   altitude_meters?: number
-  certification?: string[]       // 'rainforest' | 'fair_trade' | 'organic'
+  certification?: string[]
   bags_quantity?: number
   bag_weight_kg?: number
 }
@@ -122,8 +111,6 @@ export interface SugarcaneMetadata {
 
 export type LotMetadata = CoffeeMetadata | SoyMetadata | SugarcaneMetadata | Record<string, unknown>
 
-// -------- Dashboard Stats --------
-
 export interface DashboardStats {
   total_properties: number
   total_areas: number
@@ -132,8 +119,6 @@ export interface DashboardStats {
   lots_by_status: Record<LotStatus, number>
   recent_events: LotEvent[]
 }
-
-// -------- Formulários --------
 
 export interface PropertyFormData {
   name: string
@@ -147,7 +132,7 @@ export interface PropertyFormData {
 export interface AreaFormData {
   name: string
   property_id: string
-  geojson: GeoJSON.Feature<GeoJSON.Polygon>
+  geojson: any
   size_hectares?: number
   land_use?: LandUse
 }
@@ -168,21 +153,11 @@ export interface EventFormData {
   metadata?: Record<string, unknown>
 }
 
-// -------- Hooks futuros (preparados) --------
-
 export interface RiskScore {
-  score: number            // 0–100
+  score: number
   level: 'low' | 'medium' | 'high'
   factors: string[]
   calculated_at: string
-}
-
-export interface DeforestationCheckResult {
-  area_id: string
-  has_risk: boolean
-  risk_level: 'none' | 'low' | 'medium' | 'high'
-  source: string
-  checked_at: string
 }
 
 export interface N8nWebhookPayload {
