@@ -54,19 +54,18 @@ export default function DDSPage() {
       setLot(lotRes.data)
       setOrg(userRes.data)
 
-      // Verificar se já existe um DDS salvo para este lote
+      // Buscar DDS existente — usa maybeSingle para não lançar erro se não encontrar
       const { data: existing } = await supabase
         .from('dds_documents')
         .select('verify_id')
         .eq('lot_id', lotId)
         .order('generated_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (existing?.verify_id) {
         setVerifyId(existing.verify_id)
       } else {
-        // Gerar novo ID e salvar
         const newVerifyId = genVerifyId(
           lotRes.data?.crop_type ?? 'other',
           lotRes.data?.harvest_year ?? new Date().getFullYear()
@@ -155,23 +154,17 @@ export default function DDSPage() {
 
   return (
     <>
-      {/* Barra de ação */}
       <div style={{background:'#1a3a1a',padding:'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',position:'sticky',top:0,zIndex:100}}>
         <Link href={`/dashboard/reports/${lotId}`} style={{display:'flex',alignItems:'center',gap:'6px',color:'#a0c8a0',fontSize:'13px',textDecoration:'none'}}>
           <ArrowLeft size={15}/> Voltar
         </Link>
-
         <div style={{color:'white',fontSize:'13px',fontWeight:600}}>DDS — Declaração de Devida Diligência EUDR</div>
-
         <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-          {/* Botão copiar link de verificação */}
           <button onClick={copyVerifyLink}
             style={{display:'flex',alignItems:'center',gap:'6px',background:copied?'#2d5a2d':'#1f3a1f',color:copied?'#5a9e5a':'#a0c8a0',border:'1px solid #2d5a2d',borderRadius:'6px',padding:'7px 12px',fontSize:'12px',cursor:'pointer'}}>
             <Link2 size={13}/>
-            {copied ? 'Link copiado!' : 'Copiar link de verificação'}
+            {copied ? 'Copiado!' : 'Copiar link'}
           </button>
-
-          {/* Botão baixar PDF */}
           <button onClick={handleDownload} disabled={generating}
             style={{display:'flex',alignItems:'center',gap:'6px',background:'#4caf50',color:'white',border:'none',borderRadius:'6px',padding:'7px 16px',fontSize:'13px',fontWeight:500,cursor:generating?'not-allowed':'pointer',opacity:generating?0.7:1}}>
             {generating ? <Loader2 size={14}/> : <Download size={14}/>}
@@ -180,20 +173,14 @@ export default function DDSPage() {
         </div>
       </div>
 
-      {/* Preview */}
       <div style={{padding:'24px',background:'#f0f0f0',minHeight:'100vh'}}>
         <div ref={docRef} style={{background:'white',color:'#1a1a1a',fontFamily:'Arial,sans-serif',fontSize:'10pt',lineHeight:'1.6',padding:'20mm',maxWidth:'210mm',margin:'0 auto',boxShadow:'0 2px 20px rgba(0,0,0,0.15)'}}>
 
-          {/* Cabeçalho */}
           <div style={{borderBottom:'3px solid #1a3a1a',paddingBottom:'16px',marginBottom:'20px',textAlign:'center'}}>
-            <div style={{fontSize:'8pt',fontWeight:700,letterSpacing:'2px',color:'#2d6a2d',textTransform:'uppercase',marginBottom:'6px'}}>
-              Regulamento da União Europeia sobre Desmatamento
-            </div>
+            <div style={{fontSize:'8pt',fontWeight:700,letterSpacing:'2px',color:'#2d6a2d',textTransform:'uppercase',marginBottom:'6px'}}>Regulamento da União Europeia sobre Desmatamento</div>
             <div style={{fontSize:'16pt',fontWeight:700,marginBottom:'3px'}}>DECLARAÇÃO DE DEVIDA DILIGÊNCIA</div>
             <div style={{fontSize:'9pt',color:'#555',marginBottom:'10px'}}>Regulamento (UE) 2023/1115 — Artigo 4</div>
-            <div style={{display:'inline-block',padding:'5px 14px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'9pt',color:'#2d6a2d',fontWeight:600}}>
-              ID: {verifyId}
-            </div>
+            <div style={{display:'inline-block',padding:'5px 14px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'9pt',color:'#2d6a2d',fontWeight:600}}>ID: {verifyId}</div>
             <div style={{marginTop:'4px',fontSize:'8pt',color:'#888'}}>Gerado em: {today}</div>
           </div>
 
@@ -264,7 +251,7 @@ export default function DDSPage() {
           </Section>
 
           <Section n="7" t="DECLARAÇÃO DE LEGALIDADE">
-            <p style={{fontSize:'9pt',marginBottom:'8px'}}>O operador confirma conformidade com todas as leis aplicáveis do Brasil, incluindo:</p>
+            <p style={{fontSize:'9pt',marginBottom:'8px'}}>O operador confirma conformidade com todas as leis do Brasil, incluindo:</p>
             <BL items={['Direitos de uso e titulação da terra','Regulamentações ambientais (Código Florestal)','Legislação trabalhista e direitos humanos','Conformidade fiscal e tributária']}/>
             <div style={{fontSize:'9pt',fontWeight:600,color:'#333',margin:'8px 0 4px'}}>Documentos de Suporte:</div>
             <BL items={[`CAR: ${property?.car_number ?? 'Pendente'}`,'Documentação de titularidade da terra','Cadastro ambiental rural (SNCR)']}/>
@@ -278,11 +265,11 @@ export default function DDSPage() {
           </Section>
 
           <Section n="9" t="MEDIDAS DE MITIGAÇÃO DE RISCO">
-            <p style={{fontSize:'9pt'}}>Dado o risco <strong>BAIXO</strong>, os procedimentos padrão são suficientes. Não foram necessárias medidas adicionais.</p>
+            <p style={{fontSize:'9pt'}}>Dado o risco <strong>BAIXO</strong>, os procedimentos padrão são suficientes.</p>
           </Section>
 
           <Section n="10" t="DECLARAÇÃO DE CONFORMIDADE">
-            <p style={{fontSize:'9pt'}}>O operador declara que a devida diligência foi realizada em conformidade com o <strong>Regulamento (UE) 2023/1115</strong> e confirma que o produto atende a todos os requisitos aplicáveis, incluindo a proibição de colocar no mercado da UE produtos vinculados ao desmatamento.</p>
+            <p style={{fontSize:'9pt'}}>O operador declara que a devida diligência foi realizada em conformidade com o <strong>Regulamento (UE) 2023/1115</strong> e confirma que o produto atende a todos os requisitos aplicáveis.</p>
           </Section>
 
           <Section n="11" t="ASSINATURA DIGITAL">
@@ -301,7 +288,7 @@ export default function DDSPage() {
             <Row l="Gerado em" v={todayISO}/>
             <Row l="Link de verificação" v={verifyUrl}/>
             <div style={{marginTop:'8px',padding:'8px',background:'#f5f5f5',borderRadius:'3px',fontSize:'8pt',color:'#555',fontStyle:'italic'}}>
-              Acesse o link acima ou utilize o ID de Verificação na plataforma RastreiO para confirmar a autenticidade deste documento.
+              Acesse o link acima para verificar a autenticidade deste documento.
             </div>
           </Section>
 
