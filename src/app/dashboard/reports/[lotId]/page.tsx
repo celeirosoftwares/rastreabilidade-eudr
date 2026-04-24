@@ -20,19 +20,6 @@ const EVENT_LABELS: Record<string, string> = {
   processing: 'Processamento', sale: 'Venda', certification: 'Certificação', inspection: 'Inspeção',
 }
 
-function Check({ label, ok, warning }: { label: string; ok: boolean; warning?: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      {ok
-        ? <CheckCircle2 size={15} color="#5a9e5a" />
-        : warning
-        ? <AlertTriangle size={15} color="#d4a017" />
-        : <XCircle size={15} color="#c0392b" />}
-      <span style={{ fontSize: '13px', color: ok ? 'var(--text-secondary)' : warning ? '#d4a017' : '#c0392b' }}>{label}</span>
-    </div>
-  )
-}
-
 export default function ReportDetailPage() {
   const { lotId } = useParams()
   const [lot, setLot] = useState<any>(null)
@@ -96,14 +83,10 @@ export default function ReportDetailPage() {
   const passed = Object.values(checks).filter(Boolean).length
   const total = Object.keys(checks).length
   const percent = Math.round((passed / total) * 100)
-  const color = percent === 100 ? '#5a9e5a' : percent >= 60 ? '#d4a017' : '#c0392b'
-  const barColor = percent === 100 ? '#5a9e5a' : percent >= 60 ? '#d4a017' : '#c0392b'
-
-  const card = { background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }
+  const scoreColor = percent === 100 ? '#5a9e5a' : percent >= 60 ? '#d4a017' : '#c0392b'
 
   return (
     <div style={{ maxWidth: '900px' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link href="/dashboard/reports" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
@@ -116,24 +99,14 @@ export default function ReportDetailPage() {
             </p>
           </div>
         </div>
-        
-          href={`/dashboard/reports/dds/${lotId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            background: 'var(--accent)', color: 'white',
-            textDecoration: 'none', borderRadius: '8px',
-            padding: '8px 16px', fontSize: '13px', fontWeight: 500,
-          }}
-        >
+        <a href={`/dashboard/reports/dds/${lotId}`} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', color: 'white', textDecoration: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 500 }}>
           <FileText size={14} />
           Gerar DDS (Due Diligence Statement)
         </a>
       </div>
 
-      {/* Score */}
-      <div style={{ ...card, marginBottom: '16px' }}>
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Regulamento UE 2023/1115</div>
@@ -143,31 +116,39 @@ export default function ReportDetailPage() {
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>{property?.name ?? '—'}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '36px', fontWeight: 700, color, lineHeight: 1 }}>{percent}%</div>
+            <div style={{ fontSize: '36px', fontWeight: 700, color: scoreColor, lineHeight: 1 }}>{percent}%</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>conformidade</div>
           </div>
         </div>
         <div style={{ marginTop: '16px', height: '4px', background: 'var(--bg-muted)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${percent}%`, background: barColor, borderRadius: '2px', transition: 'width 0.5s' }} />
+          <div style={{ height: '100%', width: `${percent}%`, background: scoreColor, borderRadius: '2px' }} />
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
-        {/* Coluna esquerda */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={card}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px' }}>Checklist EUDR</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <Check label="Propriedade cadastrada" ok={checks.hasProperty} />
-              <Check label="CPF/CNPJ do produtor" ok={checks.hasDocument} />
-              <Check label="Número do CAR" ok={checks.hasCar} warning={!checks.hasCar} />
-              <Check label="Área georreferenciada" ok={checks.hasArea} />
-              <Check label="Evento de plantio" ok={checks.hasPlanting} />
-              <Check label="Evento de colheita" ok={checks.hasHarvest} warning={!checks.hasHarvest} />
+              {[
+                { label: 'Propriedade cadastrada', ok: checks.hasProperty },
+                { label: 'CPF/CNPJ do produtor', ok: checks.hasDocument },
+                { label: 'Número do CAR', ok: checks.hasCar, warning: !checks.hasCar },
+                { label: 'Área georreferenciada', ok: checks.hasArea },
+                { label: 'Evento de plantio', ok: checks.hasPlanting },
+                { label: 'Evento de colheita', ok: checks.hasHarvest, warning: !checks.hasHarvest },
+              ].map(({ label, ok, warning }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {ok ? <CheckCircle2 size={15} color="#5a9e5a" />
+                    : warning ? <AlertTriangle size={15} color="#d4a017" />
+                    : <XCircle size={15} color="#c0392b" />}
+                  <span style={{ fontSize: '12px', color: ok ? 'var(--text-secondary)' : warning ? '#d4a017' : '#c0392b' }}>{label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div style={card}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>Dados do Produtor</div>
             {[
               { l: 'Produtor', v: property?.owner_name },
@@ -184,10 +165,9 @@ export default function ReportDetailPage() {
           </div>
         </div>
 
-        {/* Coluna direita */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {area?.geojson && (
-            <div style={card}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
                 Geolocalização — {area.name}
               </div>
@@ -200,7 +180,7 @@ export default function ReportDetailPage() {
             </div>
           )}
 
-          <div style={card}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
               Cadeia de Custódia — {events.length} evento{events.length !== 1 ? 's' : ''}
             </div>
