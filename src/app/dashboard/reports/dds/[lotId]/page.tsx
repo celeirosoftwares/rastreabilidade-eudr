@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Printer } from 'lucide-react'
+import { ArrowLeft, Download, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 const CROP_LABELS: Record<string, { name: string; hs: string; scientific: string }> = {
@@ -16,13 +16,9 @@ const CROP_LABELS: Record<string, { name: string; hs: string; scientific: string
 }
 
 const EVENT_LABELS: Record<string, string> = {
-  planting:      'Data de Plantio',
-  harvest:       'Data de Colheita',
-  transport:     'Data de Transporte',
-  processing:    'Data de Processamento',
-  sale:          'Data de Venda',
-  certification: 'Data de Certificação',
-  inspection:    'Data de Inspeção',
+  planting: 'Data de Plantio', harvest: 'Data de Colheita',
+  transport: 'Data de Transporte', processing: 'Data de Processamento',
+  sale: 'Data de Venda', certification: 'Data de Certificação', inspection: 'Data de Inspeção',
 }
 
 function genSigId() { return 'SIG-' + Math.random().toString(36).substring(2,10).toUpperCase() }
@@ -33,7 +29,9 @@ export default function DDSPage() {
   const [lot, setLot] = useState<any>(null)
   const [org, setOrg] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
   const [sigId] = useState(genSigId)
+  const docRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function load() {
@@ -51,6 +49,27 @@ export default function DDSPage() {
     load()
   }, [lotId])
 
+  async function handleDownload() {
+    if (!docRef.current) return
+    setGenerating(true)
+    try {
+      const html2pdf = (await import('html2pdf.js')).default
+      const opt = {
+        margin: [15, 15, 15, 15],
+        filename: `DDS-EUDR-${lotId?.toString().substring(0,8)}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      }
+      await html2pdf().set(opt).from(docRef.current).save()
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   if (loading) return <div style={{padding:'40px',fontFamily:'sans-serif',color:'#333'}}>Carregando...</div>
   if (!lot) return <div style={{padding:'40px',fontFamily:'sans-serif',color:'red'}}>Lote não encontrado.</div>
 
@@ -64,217 +83,169 @@ export default function DDSPage() {
   const verifyId = genVerifyId(lot.crop_type, year)
   const lotCode = `LOT-${lot.crop_type.substring(0,3).toUpperCase()}-${year}-${lot.id.substring(0,6).toUpperCase()}`
   const meta = lot.metadata ?? {}
-  const volumeKg = meta.bags_quantity && meta.bag_weight_kg
-    ? `${(meta.bags_quantity * meta.bag_weight_kg).toLocaleString()} kg`
-    : 'Não informado'
+  const volumeKg = meta.bags_quantity && meta.bag_weight_kg ? `${(meta.bags_quantity * meta.bag_weight_kg).toLocaleString()} kg` : 'Não informado'
   const geojsonStr = area?.geojson ? JSON.stringify(area.geojson.geometry, null, 2) : '—'
 
-  const s = {
-    page: { background:'white', color:'#1a1a1a', fontFamily:'Georgia, serif', fontSize:'10.5pt', lineHeight:'1.6', padding:'16mm 20mm' } as React.CSSProperties,
-    sectionHeader: { background:'#1a3a1a', color:'white', padding:'5px 10px', fontSize:'9pt', fontWeight:700 as const, letterSpacing:'0.5px', marginBottom:'10px', marginTop:'0', pageBreakAfter:'avoid' as const } as React.CSSProperties,
-    section: { marginBottom:'18px', pageBreakInside:'avoid' as const } as React.CSSProperties,
-    row: { display:'flex' as const, gap:'8px', padding:'4px 0', borderBottom:'1px solid #eee', fontSize:'9pt' } as React.CSSProperties,
-    label: { fontWeight:600 as const, minWidth:'190px', color:'#333', flexShrink:0 } as React.CSSProperties,
-    value: { color:'#1a1a1a' } as React.CSSProperties,
-    bullet: { paddingLeft:'18px', margin:'4px 0' } as React.CSSProperties,
-    li: { fontSize:'9pt', color:'#333', padding:'1px 0' } as React.CSSProperties,
-    note: { fontSize:'9pt', color:'#333', marginBottom:'8px' } as React.CSSProperties,
-    highlight: { marginTop:'8px', padding:'6px 10px', background:'#f0f7f0', border:'1px solid #2d6a2d', borderRadius:'3px', fontSize:'9pt' } as React.CSSProperties,
-  }
+  const Row = ({ l, v }: { l: string; v: string }) => (
+    <div style={{display:'flex',gap:'8px',padding:'4px 0',borderBottom:'1px solid #eee',fontSize:'9pt'}}>
+      <span style={{fontWeight:600,minWidth:'200px',color:'#333',flexShrink:0}}>{l}:</span>
+      <span style={{color:'#1a1a1a'}}>{v}</span>
+    </div>
+  )
+
+  const Section = ({ n, t, children }: any) => (
+    <div style={{marginBottom:'16px',pageBreakInside:'avoid'}}>
+      <div style={{background:'#1a3a1a',color:'white',padding:'5px 10px',fontSize:'9pt',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px'}}>
+        {n}. {t}
+      </div>
+      <div style={{paddingLeft:'2px'}}>{children}</div>
+    </div>
+  )
+
+  const BL = ({ items }: { items: string[] }) => (
+    <ul style={{paddingLeft:'18px',margin:'4px 0'}}>
+      {items.map((item, i) => <li key={i} style={{fontSize:'9pt',color:'#333',padding:'1px 0'}}>{item}</li>)}
+    </ul>
+  )
 
   return (
     <>
-      {/* Barra de ação — some no print */}
-      <div className="no-print" style={{background:'#1a3a1a',padding:'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100}}>
+      <div style={{background:'#1a3a1a',padding:'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100}}>
         <Link href={`/dashboard/reports/${lotId}`} style={{display:'flex',alignItems:'center',gap:'6px',color:'#a0c8a0',fontSize:'13px',textDecoration:'none'}}>
-          <ArrowLeft size={15}/> Voltar ao Relatório
+          <ArrowLeft size={15}/> Voltar
         </Link>
         <div style={{color:'white',fontSize:'13px',fontWeight:600}}>DDS — Declaração de Devida Diligência EUDR</div>
-        <button onClick={()=>window.print()} style={{display:'flex',alignItems:'center',gap:'6px',background:'#4caf50',color:'white',border:'none',borderRadius:'6px',padding:'7px 16px',fontSize:'13px',fontWeight:500,cursor:'pointer'}}>
-          <Printer size={14}/> Salvar como PDF
+        <button onClick={handleDownload} disabled={generating}
+          style={{display:'flex',alignItems:'center',gap:'6px',background:'#4caf50',color:'white',border:'none',borderRadius:'6px',padding:'7px 16px',fontSize:'13px',fontWeight:500,cursor:generating?'not-allowed':'pointer',opacity:generating?0.7:1}}>
+          {generating ? <Loader2 size={14}/> : <Download size={14}/>}
+          {generating ? 'Gerando PDF...' : 'Baixar PDF'}
         </button>
       </div>
 
-      {/* Documento */}
-      <div id="dds" style={s.page}>
+      <div style={{padding:'24px',background:'#f0f0f0',minHeight:'100vh'}}>
+        <div ref={docRef} style={{background:'white',color:'#1a1a1a',fontFamily:'Arial,sans-serif',fontSize:'10pt',lineHeight:'1.6',padding:'20mm',maxWidth:'210mm',margin:'0 auto',boxShadow:'0 2px 20px rgba(0,0,0,0.15)'}}>
 
-        {/* Cabeçalho */}
-        <div style={{borderBottom:'3px solid #1a3a1a',paddingBottom:'16px',marginBottom:'24px',textAlign:'center'}}>
-          <div style={{fontSize:'8pt',fontWeight:700,letterSpacing:'2px',color:'#2d6a2d',textTransform:'uppercase',marginBottom:'6px'}}>Regulamento da União Europeia sobre Desmatamento</div>
-          <div style={{fontSize:'15pt',fontWeight:700,marginBottom:'3px'}}>DECLARAÇÃO DE DEVIDA DILIGÊNCIA</div>
-          <div style={{fontSize:'8.5pt',color:'#555',marginBottom:'10px'}}>Regulamento (UE) 2023/1115 — Artigo 4</div>
-          <div style={{display:'inline-block',padding:'5px 14px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'8.5pt',color:'#2d6a2d',fontWeight:600}}>
-            ID do Documento: {verifyId}
+          <div style={{borderBottom:'3px solid #1a3a1a',paddingBottom:'16px',marginBottom:'20px',textAlign:'center'}}>
+            <div style={{fontSize:'8pt',fontWeight:700,letterSpacing:'2px',color:'#2d6a2d',textTransform:'uppercase',marginBottom:'6px'}}>Regulamento da União Europeia sobre Desmatamento</div>
+            <div style={{fontSize:'16pt',fontWeight:700,marginBottom:'3px'}}>DECLARAÇÃO DE DEVIDA DILIGÊNCIA</div>
+            <div style={{fontSize:'9pt',color:'#555',marginBottom:'10px'}}>Regulamento (UE) 2023/1115 — Artigo 4</div>
+            <div style={{display:'inline-block',padding:'5px 14px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'9pt',color:'#2d6a2d',fontWeight:600}}>ID: {verifyId}</div>
+            <div style={{marginTop:'4px',fontSize:'8pt',color:'#888'}}>Gerado em: {today}</div>
           </div>
-          <div style={{marginTop:'6px',fontSize:'8pt',color:'#888'}}>Gerado em: {today}</div>
-        </div>
 
-        {/* 1 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>1. INFORMAÇÕES DO OPERADOR</div>
-          <div style={s.row}><span style={s.label}>Nome da Organização:</span><span style={s.value}>{org?.organization?.name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>CNPJ / Documento:</span><span style={s.value}>{org?.organization?.document_id ?? 'Não informado'}</span></div>
-          <div style={s.row}><span style={s.label}>Responsável:</span><span style={s.value}>{org?.name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>E-mail:</span><span style={s.value}>{org?.email ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>País:</span><span style={s.value}>Brasil</span></div>
-        </div>
+          <Section n="1" t="INFORMAÇÕES DO OPERADOR">
+            <Row l="Nome da Organização" v={org?.organization?.name ?? '—'}/>
+            <Row l="CNPJ / Documento" v={org?.organization?.document_id ?? 'Não informado'}/>
+            <Row l="Responsável" v={org?.name ?? '—'}/>
+            <Row l="E-mail" v={org?.email ?? '—'}/>
+            <Row l="País" v="Brasil"/>
+          </Section>
 
-        {/* 2 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>2. INFORMAÇÕES DO PRODUTO</div>
-          <div style={s.row}><span style={s.label}>Tipo de Produto:</span><span style={s.value}>{crop.name} ({crop.scientific})</span></div>
-          <div style={s.row}><span style={s.label}>Código SH:</span><span style={s.value}>{crop.hs}</span></div>
-          <div style={s.row}><span style={s.label}>Quantidade:</span><span style={s.value}>{volumeKg}</span></div>
-          <div style={s.row}><span style={s.label}>ID do Lote:</span><span style={s.value}>{lotCode}</span></div>
-          <div style={s.row}><span style={s.label}>Ano de Safra:</span><span style={s.value}>{year}</span></div>
-          {meta.processing_type && <div style={s.row}><span style={s.label}>Método de Processamento:</span><span style={s.value}>{meta.processing_type}</span></div>}
-          {meta.variety && <div style={s.row}><span style={s.label}>Variedade:</span><span style={s.value}>{meta.variety}</span></div>}
-        </div>
+          <Section n="2" t="INFORMAÇÕES DO PRODUTO">
+            <Row l="Tipo de Produto" v={`${crop.name} (${crop.scientific})`}/>
+            <Row l="Código SH" v={crop.hs}/>
+            <Row l="Quantidade" v={volumeKg}/>
+            <Row l="ID do Lote" v={lotCode}/>
+            <Row l="Ano de Safra" v={String(year)}/>
+            {meta.processing_type && <Row l="Método de Processamento" v={String(meta.processing_type)}/>}
+            {meta.variety && <Row l="Variedade" v={String(meta.variety)}/>}
+          </Section>
 
-        {/* 3 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>3. PAÍS DE PRODUÇÃO</div>
-          <div style={s.row}><span style={s.label}>País:</span><span style={s.value}>Brasil</span></div>
-          <div style={s.row}><span style={s.label}>Estado:</span><span style={s.value}>{property?.state ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>Município:</span><span style={s.value}>{property?.municipality ?? '—'}</span></div>
-        </div>
+          <Section n="3" t="PAÍS DE PRODUÇÃO">
+            <Row l="País" v="Brasil"/>
+            <Row l="Estado" v={property?.state ?? '—'}/>
+            <Row l="Município" v={property?.municipality ?? '—'}/>
+          </Section>
 
-        {/* 4 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>4. GEOLOCALIZAÇÃO DA ÁREA DE PRODUÇÃO</div>
-          <div style={s.row}><span style={s.label}>Nome da Propriedade:</span><span style={s.value}>{property?.name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>Proprietário:</span><span style={s.value}>{property?.owner_name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>CPF / CNPJ:</span><span style={s.value}>{property?.document_id ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>Número do CAR:</span><span style={s.value}>{property?.car_number ?? 'Não informado'}</span></div>
-          <div style={s.row}><span style={s.label}>Nome da Área:</span><span style={s.value}>{area?.name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>Tamanho da Área:</span><span style={s.value}>{area?.size_hectares ? `${Number(area.size_hectares).toFixed(4)} hectares` : '—'}</span></div>
-          {area?.geojson && (
+          <Section n="4" t="GEOLOCALIZAÇÃO DA ÁREA DE PRODUÇÃO">
+            <Row l="Nome da Propriedade" v={property?.name ?? '—'}/>
+            <Row l="Proprietário" v={property?.owner_name ?? '—'}/>
+            <Row l="CPF / CNPJ" v={property?.document_id ?? '—'}/>
+            <Row l="Número do CAR" v={property?.car_number ?? 'Não informado'}/>
+            <Row l="Nome da Área" v={area?.name ?? '—'}/>
+            <Row l="Tamanho da Área" v={area?.size_hectares ? `${Number(area.size_hectares).toFixed(4)} hectares` : '—'}/>
+            {area?.geojson && (
+              <div style={{marginTop:'8px'}}>
+                <div style={{fontSize:'9pt',fontWeight:600,color:'#333',marginBottom:'4px'}}>Polígono GeoJSON:</div>
+                <pre style={{background:'#f5f5f5',border:'1px solid #ddd',borderRadius:'3px',padding:'8px',fontSize:'7pt',fontFamily:'monospace',whiteSpace:'pre-wrap',wordBreak:'break-all',margin:0}}>{geojsonStr}</pre>
+              </div>
+            )}
+          </Section>
+
+          <Section n="5" t="INFORMAÇÕES DE RASTREABILIDADE">
+            <Row l="ID do Lote" v={lotCode}/>
+            <Row l="Área Vinculada" v={area?.name ?? '—'}/>
+            <Row l="Tipo de Cultura" v={crop.name}/>
             <div style={{marginTop:'8px'}}>
-              <div style={{fontSize:'9pt',fontWeight:600,color:'#333',marginBottom:'4px'}}>Geolocalização (Polígono GeoJSON):</div>
-              <pre style={{background:'#f5f5f5',border:'1px solid #ddd',borderRadius:'3px',padding:'8px',fontSize:'7.5pt',fontFamily:'monospace',whiteSpace:'pre-wrap',wordBreak:'break-all',pageBreakInside:'avoid'}}>{geojsonStr}</pre>
+              <div style={{fontSize:'9pt',fontWeight:600,color:'#333',marginBottom:'4px'}}>Linha do Tempo:</div>
+              {events.length === 0
+                ? <div style={{fontSize:'9pt',color:'#888'}}>Nenhum evento registrado.</div>
+                : events.map((e: any) => (
+                  <div key={e.id} style={{display:'flex',gap:'10px',padding:'3px 0',borderBottom:'1px solid #eee',fontSize:'9pt'}}>
+                    <span style={{fontWeight:600,minWidth:'170px',color:'#333',flexShrink:0}}>{EVENT_LABELS[e.type] ?? e.type}:</span>
+                    <span>{e.date}</span>
+                    {e.description && <span style={{color:'#666'}}>— {e.description}</span>}
+                  </div>
+                ))
+              }
             </div>
-          )}
-        </div>
+          </Section>
 
-        {/* 5 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>5. INFORMAÇÕES DE RASTREABILIDADE</div>
-          <div style={s.row}><span style={s.label}>ID do Lote:</span><span style={s.value}>{lotCode}</span></div>
-          <div style={s.row}><span style={s.label}>Área Vinculada:</span><span style={s.value}>{area?.name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>Tipo de Cultura:</span><span style={s.value}>{crop.name}</span></div>
-          <div style={{marginTop:'8px'}}>
-            <div style={{fontSize:'9pt',fontWeight:600,color:'#333',marginBottom:'4px'}}>Linha do Tempo de Produção:</div>
-            {events.length === 0
-              ? <div style={{fontSize:'9pt',color:'#888'}}>Nenhum evento registrado.</div>
-              : events.map((e: any) => (
-                <div key={e.id} style={{display:'flex',gap:'10px',padding:'3px 0',borderBottom:'1px solid #eee',fontSize:'9pt'}}>
-                  <span style={{fontWeight:600,minWidth:'160px',color:'#333',flexShrink:0}}>{EVENT_LABELS[e.type] ?? e.type}:</span>
-                  <span>{e.date}</span>
-                  {e.description && <span style={{color:'#666'}}>— {e.description}</span>}
-                </div>
-              ))
-            }
+          <Section n="6" t="DECLARAÇÃO DE AUSÊNCIA DE DESMATAMENTO">
+            <p style={{fontSize:'9pt',marginBottom:'8px'}}>O operador confirma que o produto foi produzido em terra que <strong>não foi sujeita a desmatamento após 31 de dezembro de 2020</strong>, conforme o Artigo 3 do Regulamento (UE) 2023/1115.</p>
+            <BL items={['Análise de dados de satélite (MapBiomas / Global Forest Watch)','Validação de sobreposição de polígonos','Verificação de alertas PRODES/DETER']}/>
+            <div style={{marginTop:'8px',padding:'6px 10px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'9pt'}}>
+              <strong>Resultado:</strong> Nenhum desmatamento detectado após 31/12/2020
+            </div>
+          </Section>
+
+          <Section n="7" t="DECLARAÇÃO DE LEGALIDADE">
+            <p style={{fontSize:'9pt',marginBottom:'8px'}}>O operador confirma conformidade com todas as leis aplicáveis do Brasil, incluindo:</p>
+            <BL items={['Direitos de uso e titulação da terra','Regulamentações ambientais (Código Florestal)','Legislação trabalhista e direitos humanos','Conformidade fiscal e tributária']}/>
+            <div style={{fontSize:'9pt',fontWeight:600,color:'#333',margin:'8px 0 4px'}}>Documentos de Suporte:</div>
+            <BL items={[`CAR: ${property?.car_number ?? 'Pendente'}`,'Documentação de titularidade da terra','Cadastro ambiental rural (SNCR)']}/>
+          </Section>
+
+          <Section n="8" t="AVALIAÇÃO DE RISCO">
+            <Row l="Nível de Risco do País" v="Padrão (Brasil)"/>
+            <Row l="Nível de Risco da Região" v="Baixo"/>
+            <Row l="Classificação Geral" v="BAIXO"/>
+            <BL items={['Taxas históricas de desmatamento na área','Complexidade da cadeia de fornecimento','Qualidade dos dados de rastreabilidade','Proximidade a áreas protegidas']}/>
+          </Section>
+
+          <Section n="9" t="MEDIDAS DE MITIGAÇÃO DE RISCO">
+            <p style={{fontSize:'9pt'}}>Dado o risco <strong>BAIXO</strong>, os procedimentos padrão são suficientes. Não foram necessárias medidas adicionais.</p>
+          </Section>
+
+          <Section n="10" t="DECLARAÇÃO DE CONFORMIDADE">
+            <p style={{fontSize:'9pt'}}>O operador declara que a devida diligência foi realizada em conformidade com o <strong>Regulamento (UE) 2023/1115</strong> e confirma que o produto atende a todos os requisitos aplicáveis, incluindo a proibição de colocar no mercado da UE produtos vinculados ao desmatamento.</p>
+          </Section>
+
+          <Section n="11" t="ASSINATURA DIGITAL">
+            <Row l="Responsável" v={org?.name ?? '—'}/>
+            <Row l="Cargo" v="Responsável pela Conformidade"/>
+            <Row l="Data" v={todayISO}/>
+            <Row l="ID da Assinatura" v={sigId}/>
+            <div style={{marginTop:'10px',borderTop:'1px solid #ddd',paddingTop:'8px',fontSize:'8pt',color:'#888',fontStyle:'italic'}}>
+              Documento gerado digitalmente pela Plataforma RastreiO de Conformidade EUDR.
+            </div>
+          </Section>
+
+          <Section n="12" t="VERIFICAÇÃO DE RASTREABILIDADE">
+            <Row l="ID de Verificação" v={verifyId}/>
+            <Row l="Referência do Lote" v={lotCode}/>
+            <Row l="Gerado em" v={todayISO}/>
+            <div style={{marginTop:'8px',padding:'8px',background:'#f5f5f5',borderRadius:'3px',fontSize:'8pt',color:'#555',fontStyle:'italic'}}>
+              Verificável pelo ID acima na plataforma RastreiO.
+            </div>
+          </Section>
+
+          <div style={{marginTop:'20px',borderTop:'2px solid #1a3a1a',paddingTop:'10px',textAlign:'center',fontSize:'8pt',color:'#888'}}>
+            <div>Gerado por <strong>RastreiO</strong> — Plataforma de Conformidade EUDR</div>
+            <div>Em conformidade com o Regulamento (UE) 2023/1115</div>
           </div>
-        </div>
-
-        {/* 6 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>6. DECLARAÇÃO DE AUSÊNCIA DE DESMATAMENTO</div>
-          <p style={s.note}>O operador confirma que o produto foi produzido em terra que <strong>não foi sujeita a desmatamento após 31 de dezembro de 2020</strong>, conforme o Artigo 3 do Regulamento (UE) 2023/1115.</p>
-          <div style={{fontSize:'9pt',fontWeight:600,color:'#333',marginBottom:'4px'}}>Métodos de Verificação:</div>
-          <ul style={s.bullet}>
-            <li style={s.li}>Análise de dados de satélite (MapBiomas / Global Forest Watch)</li>
-            <li style={s.li}>Validação de sobreposição de polígonos</li>
-            <li style={s.li}>Verificação de alertas de desmatamento (PRODES/DETER)</li>
-          </ul>
-          <div style={s.highlight}><strong>Resultado:</strong> Nenhum desmatamento detectado após a data de corte (31/12/2020)</div>
-        </div>
-
-        {/* 7 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>7. DECLARAÇÃO DE LEGALIDADE</div>
-          <p style={s.note}>O operador confirma que o produto foi produzido em conformidade com todas as leis aplicáveis do Brasil, incluindo:</p>
-          <ul style={s.bullet}>
-            <li style={s.li}>Direitos de uso e titulação da terra</li>
-            <li style={s.li}>Regulamentações ambientais (Código Florestal Brasileiro)</li>
-            <li style={s.li}>Legislação trabalhista e direitos humanos</li>
-            <li style={s.li}>Conformidade fiscal e tributária</li>
-          </ul>
-          <div style={{fontSize:'9pt',fontWeight:600,color:'#333',margin:'8px 0 4px'}}>Documentos de Suporte:</div>
-          <ul style={s.bullet}>
-            <li style={s.li}>CAR (Cadastro Ambiental Rural){property?.car_number ? `: ${property.car_number}` : ' — Pendente'}</li>
-            <li style={s.li}>Documentação de titularidade da terra</li>
-            <li style={s.li}>Cadastro ambiental rural (SNCR)</li>
-          </ul>
-        </div>
-
-        {/* 8 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>8. AVALIAÇÃO DE RISCO</div>
-          <div style={s.row}><span style={s.label}>Nível de Risco do País:</span><span style={s.value}>Padrão (Brasil)</span></div>
-          <div style={s.row}><span style={s.label}>Nível de Risco da Região:</span><span style={s.value}>Baixo</span></div>
-          <div style={s.row}><span style={s.label}>Classificação Geral de Risco:</span><span style={{...s.value,fontWeight:600,color:'#2d6a2d'}}>BAIXO</span></div>
-          <div style={{fontSize:'9pt',fontWeight:600,color:'#333',margin:'8px 0 4px'}}>Fatores de Risco Avaliados:</div>
-          <ul style={s.bullet}>
-            <li style={s.li}>Taxas históricas de desmatamento na área de produção</li>
-            <li style={s.li}>Complexidade e transparência da cadeia de fornecimento</li>
-            <li style={s.li}>Qualidade e completude dos dados de rastreabilidade</li>
-            <li style={s.li}>Proximidade a áreas protegidas e terras indígenas</li>
-          </ul>
-        </div>
-
-        {/* 9 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>9. MEDIDAS DE MITIGAÇÃO DE RISCO</div>
-          <p style={s.note}>Dado o nível de risco <strong>BAIXO</strong>, os procedimentos padrão de devida diligência são suficientes. Não foram necessárias medidas adicionais além da documentação padrão e verificação de geolocalização.</p>
-        </div>
-
-        {/* 10 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>10. DECLARAÇÃO DE CONFORMIDADE</div>
-          <p style={s.note}>O operador declara que a devida diligência foi realizada em conformidade com o <strong>Regulamento (UE) 2023/1115</strong> e confirma que o produto referenciado acima atende a todos os requisitos aplicáveis do regulamento, incluindo a proibição de colocar no mercado da UE produtos vinculados ao desmatamento ou à degradação florestal.</p>
-        </div>
-
-        {/* 11 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>11. ASSINATURA DIGITAL</div>
-          <div style={s.row}><span style={s.label}>Responsável:</span><span style={s.value}>{org?.name ?? '—'}</span></div>
-          <div style={s.row}><span style={s.label}>Cargo:</span><span style={s.value}>Responsável pela Conformidade</span></div>
-          <div style={s.row}><span style={s.label}>Data:</span><span style={s.value}>{todayISO}</span></div>
-          <div style={s.row}><span style={s.label}>ID da Assinatura:</span><span style={s.value}>{sigId}</span></div>
-          <div style={{marginTop:'12px',borderTop:'1px solid #ddd',paddingTop:'10px',fontSize:'8pt',color:'#888',fontStyle:'italic'}}>
-            Este documento foi gerado digitalmente pela Plataforma RastreiO de Conformidade EUDR. O ID de Assinatura serve como referência digital para esta declaração.
-          </div>
-        </div>
-
-        {/* 12 */}
-        <div style={s.section}>
-          <div style={s.sectionHeader}>12. VERIFICAÇÃO DE RASTREABILIDADE</div>
-          <div style={s.row}><span style={s.label}>ID de Verificação:</span><span style={s.value}>{verifyId}</span></div>
-          <div style={s.row}><span style={s.label}>Referência do Lote:</span><span style={s.value}>{lotCode}</span></div>
-          <div style={s.row}><span style={s.label}>Gerado em:</span><span style={s.value}>{todayISO}</span></div>
-          <div style={{marginTop:'10px',padding:'8px',background:'#f5f5f5',borderRadius:'3px',fontSize:'8pt',color:'#555',fontStyle:'italic'}}>
-            Este relatório pode ser verificado utilizando o ID de Verificação acima através da plataforma RastreiO.
-          </div>
-        </div>
-
-        {/* Rodapé */}
-        <div style={{marginTop:'24px',borderTop:'2px solid #1a3a1a',paddingTop:'12px',textAlign:'center',fontSize:'8pt',color:'#888'}}>
-          <div>Gerado por <strong>RastreiO</strong> — Plataforma de Conformidade EUDR</div>
-          <div style={{marginTop:'3px'}}>Em conformidade com o Regulamento (UE) 2023/1115 do Parlamento Europeu e do Conselho</div>
         </div>
       </div>
-
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; margin: 0 !important; }
-          #dds { padding: 15mm 20mm !important; }
-          @page { size: A4; margin: 0; }
-          pre { white-space: pre-wrap !important; word-break: break-all !important; }
-          div { page-break-inside: auto; }
-        }
-      `}</style>
     </>
   )
 }

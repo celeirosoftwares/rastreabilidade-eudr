@@ -25,7 +25,8 @@
     "@hookform/resolvers": "^3.4.2",
     "date-fns": "^3.6.0",
     "recharts": "^2.12.7",
-    "sonner": "^1.4.41"
+    "sonner": "^1.4.41",
+    "html2pdf.js": "^0.10.2"
   },
   "devDependencies": {
     "typescript": "^5",
