@@ -5,10 +5,6 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Ruler, Layers, MapPin, Copy, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
-
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
 const LAND_USE_LABELS: Record<string, string> = {
   cultivation: 'Área de Cultivo', native: 'Vegetação Nativa',
@@ -26,17 +22,13 @@ export default function AreaDetailPage() {
   const [area, setArea] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<any>(null)
+  const mapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function load() {
       const supabase = createClient()
       const { data } = await supabase
-        .from('areas')
-        .select('*, property:properties(name)')
-        .eq('id', id)
-        .single()
+        .from('areas').select('*, property:properties(name)').eq('id', id).single()
       setArea(data)
       setLoading(false)
     }
@@ -44,44 +36,44 @@ export default function AreaDetailPage() {
   }, [id])
 
   useEffect(() => {
-    if (!area?.geojson || !mapContainer.current || mapRef.current) return
+    if (!area?.geojson || !mapRef.current) return
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
+    if (!apiKey) return
 
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [-47.9292, -15.7801],
-      zoom: 5,
-    })
+    function initMap() {
+      if (!mapRef.current) return
+      const coords = area.geojson.geometry.coordinates[0].map((c: number[]) => ({ lat: c[1], lng: c[0] }))
+      const map = new (window as any).google.maps.Map(mapRef.current, {
+        center: coords[0], zoom: 15, mapTypeId: 'satellite', streetViewControl: false,
+      })
+      new (window as any).google.maps.Polygon({
+        paths: coords, fillColor: '#4caf50', fillOpacity: 0.3,
+        strokeColor: '#4caf50', strokeWeight: 2, map,
+      })
+      const bounds = new (window as any).google.maps.LatLngBounds()
+      coords.forEach((c: any) => bounds.extend(c))
+      map.fitBounds(bounds, 60)
+    }
 
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right')
-
-    map.on('load', () => {
-      map.addSource('area', { type: 'geojson', data: area.geojson })
-      map.addLayer({ id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': '#4caf50', 'fill-opacity': 0.3 } })
-      map.addLayer({ id: 'area-line', type: 'line', source: 'area', paint: { 'line-color': '#4caf50', 'line-width': 2 } })
-
-      const coords = area.geojson.geometry.coordinates[0]
-      const bounds = coords.reduce(
-        (b: mapboxgl.LngLatBounds, c: number[]) => b.extend(c as [number, number]),
-        new mapboxgl.LngLatBounds(coords[0] as [number, number], coords[0] as [number, number])
-      )
-      map.fitBounds(bounds, { padding: 80 })
-    })
-
-    mapRef.current = map
-    return () => { map.remove(); mapRef.current = null }
+    if ((window as any).google?.maps) initMap()
+    else {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=drawing`
+      script.async = true
+      script.onload = initMap
+      document.head.appendChild(script)
+    }
   }, [area])
 
   function copyCoords() {
     if (!area?.geojson) return
-    const text = JSON.stringify(area.geojson.geometry.coordinates[0], null, 2)
-    navigator.clipboard.writeText(text)
+    navigator.clipboard.writeText(JSON.stringify(area.geojson.geometry.coordinates[0], null, 2))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (loading) return <div className="text-[#4d7a4d] text-sm">Carregando...</div>
-  if (!area) return <div className="text-red-400 text-sm">Área não encontrada.</div>
+  if (loading) return <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Carregando...</div>
+  if (!area) return <div style={{ color: 'red', fontSize: '13px' }}>Área não encontrada.</div>
 
   const coords = area.geojson?.geometry?.coordinates?.[0] ?? []
   const centroid = coords.length > 0 ? getCentroid(coords) : null
@@ -98,7 +90,6 @@ export default function AreaDetailPage() {
         </div>
       </div>
 
-      {/* Info cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Área', value: area.size_hectares ? `${Number(area.size_hectares).toFixed(2)} ha` : '—' },
@@ -113,7 +104,6 @@ export default function AreaDetailPage() {
         ))}
       </div>
 
-      {/* Mapa */}
       <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-white font-semibold text-sm flex items-center gap-2">
@@ -126,39 +116,31 @@ export default function AreaDetailPage() {
             </span>
           )}
         </div>
-        <div ref={mapContainer} className="w-full h-[400px] rounded-xl overflow-hidden border border-[#2d3d2d]" />
+        <div ref={mapRef} className="w-full h-[400px] rounded-xl overflow-hidden border border-[#2d3d2d]" />
       </div>
 
-      {/* Coordenadas */}
       {coords.length > 0 && (
         <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold text-sm flex items-center gap-2">
               <MapPin className="w-4 h-4 text-[#4caf50]" /> Coordenadas do Polígono
             </h3>
-            <button onClick={copyCoords}
-              className="flex items-center gap-1.5 text-xs text-[#6b8f6b] hover:text-white transition-colors">
+            <button onClick={copyCoords} className="flex items-center gap-1.5 text-xs text-[#6b8f6b] hover:text-white">
               {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? 'Copiado!' : 'Copiar'}
             </button>
           </div>
-
           {centroid && (
             <div className="mb-3 p-3 bg-[#1e2e1e] rounded-lg">
               <div className="text-[#6b8f6b] text-xs mb-1">Ponto central (centróide)</div>
-              <div className="text-white text-sm font-mono">
-                Lat: {centroid[1].toFixed(6)} | Lng: {centroid[0].toFixed(6)}
-              </div>
+              <div className="text-white text-sm font-mono">Lat: {centroid[1].toFixed(6)} | Lng: {centroid[0].toFixed(6)}</div>
             </div>
           )}
-
           <div className="space-y-1 max-h-48 overflow-y-auto">
             {coords.slice(0, -1).map((coord: number[], i: number) => (
               <div key={i} className="flex items-center gap-3 py-1.5 px-3 bg-[#1e2e1e] rounded-lg">
                 <span className="text-[#4d7a4d] text-xs w-6 shrink-0">#{i + 1}</span>
-                <span className="text-white text-xs font-mono">
-                  Lat: {coord[1].toFixed(6)} | Lng: {coord[0].toFixed(6)}
-                </span>
+                <span className="text-white text-xs font-mono">Lat: {coord[1].toFixed(6)} | Lng: {coord[0].toFixed(6)}</span>
               </div>
             ))}
           </div>
