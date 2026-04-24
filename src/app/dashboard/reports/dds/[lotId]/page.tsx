@@ -54,18 +54,17 @@ export default function DDSPage() {
       setLot(lotRes.data)
       setOrg(userRes.data)
 
-      // Buscar DDS existente — usa maybeSingle para não lançar erro se não encontrar
-      const { data: existing } = await supabase
+      // Buscar DDS existente para este lote
+      const { data: existing, error: fetchError } = await supabase
         .from('dds_documents')
         .select('verify_id')
         .eq('lot_id', lotId)
-        .order('generated_at', { ascending: false })
         .limit(1)
-        .maybeSingle()
 
-      if (existing?.verify_id) {
-        setVerifyId(existing.verify_id)
+      if (!fetchError && existing && existing.length > 0) {
+        setVerifyId(existing[0].verify_id)
       } else {
+        // Criar novo
         const newVerifyId = genVerifyId(
           lotRes.data?.crop_type ?? 'other',
           lotRes.data?.harvest_year ?? new Date().getFullYear()
