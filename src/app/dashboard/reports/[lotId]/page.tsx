@@ -5,10 +5,6 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
-
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
 const CROP_LABELS: Record<string, string> = {
   coffee: 'Café', soy: 'Soja', sugarcane: 'Cana-de-açúcar',
@@ -24,8 +20,7 @@ export default function ReportDetailPage() {
   const { lotId } = useParams()
   const [lot, setLot] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<any>(null)
+  const mapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function load() {
@@ -42,26 +37,33 @@ export default function ReportDetailPage() {
   }, [lotId])
 
   useEffect(() => {
-    if (!lot?.area?.geojson || !mapContainer.current || mapRef.current) return
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [-47.9292, -15.7801], zoom: 5,
-    })
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right')
-    map.on('load', () => {
-      map.addSource('area', { type: 'geojson', data: lot.area.geojson })
-      map.addLayer({ id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': '#4caf50', 'fill-opacity': 0.3 } })
-      map.addLayer({ id: 'area-line', type: 'line', source: 'area', paint: { 'line-color': '#4caf50', 'line-width': 2 } })
-      const coords = lot.area.geojson.geometry.coordinates[0]
-      const bounds = coords.reduce(
-        (b: mapboxgl.LngLatBounds, c: number[]) => b.extend(c as [number, number]),
-        new mapboxgl.LngLatBounds(coords[0] as [number, number], coords[0] as [number, number])
-      )
-      map.fitBounds(bounds, { padding: 80 })
-    })
-    mapRef.current = map
-    return () => { map.remove(); mapRef.current = null }
+    if (!lot?.area?.geojson || !mapRef.current) return
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
+    if (!apiKey) return
+
+    function initMap() {
+      if (!mapRef.current) return
+      const coords = lot.area.geojson.geometry.coordinates[0].map((c: number[]) => ({ lat: c[1], lng: c[0] }))
+      const map = new google.maps.Map(mapRef.current, {
+        center: coords[0], zoom: 15, mapTypeId: 'satellite', streetViewControl: false,
+      })
+      new google.maps.Polygon({
+        paths: coords, fillColor: '#4caf50', fillOpacity: 0.3,
+        strokeColor: '#4caf50', strokeWeight: 2, map,
+      })
+      const bounds = new google.maps.LatLngBounds()
+      coords.forEach((c: any) => bounds.extend(c))
+      map.fitBounds(bounds, 60)
+    }
+
+    if (window.google?.maps) initMap()
+    else {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=drawing`
+      script.async = true
+      script.onload = initMap
+      document.head.appendChild(script)
+    }
   }, [lot])
 
   if (loading) return <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Carregando...</div>
@@ -137,7 +139,7 @@ export default function ReportDetailPage() {
                 { label: 'Área georreferenciada', ok: checks.hasArea },
                 { label: 'Evento de plantio', ok: checks.hasPlanting },
                 { label: 'Evento de colheita', ok: checks.hasHarvest, warning: !checks.hasHarvest },
-              ].map(({ label, ok, warning }) => (
+              ].map(({ label, ok, warning }: any) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {ok ? <CheckCircle2 size={15} color="#5a9e5a" />
                     : warning ? <AlertTriangle size={15} color="#d4a017" />
@@ -171,10 +173,10 @@ export default function ReportDetailPage() {
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
                 Geolocalização — {area.name}
               </div>
-              <div ref={mapContainer} style={{ width: '100%', height: '280px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }} />
+              <div ref={mapRef} style={{ width: '100%', height: '280px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }} />
               {area.size_hectares && (
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  Área total: <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{Number(area.size_hectares).toFixed(4)} hectares</span>
+                  Área total: <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{Number(area.size_hectares).toFixed(4)} ha</span>
                 </p>
               )}
             </div>
