@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Ruler, Trash2, Info } from 'lucide-react'
+import { Ruler, Trash2, Search } from 'lucide-react'
 
 interface AreaMapProps {
   initialGeojson?: any
@@ -23,9 +23,10 @@ function calculateAreaHectares(coords: [number, number][]): number {
 
 export default function AreaMap({ initialGeojson, onPolygonChange, readonly = false }: AreaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
   const googleMapRef = useRef<any>(null)
-  const drawingManagerRef = useRef<any>(null)
   const polygonRef = useRef<any>(null)
+  const autocompleteRef = useRef<any>(null)
   const [hectares, setHectares] = useState(0)
   const [hasPolygon, setHasPolygon] = useState(false)
 
@@ -49,14 +50,45 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
 
     function initMap() {
       if (!mapRef.current) return
+
       const map = new (window as any).google.maps.Map(mapRef.current, {
         center: { lat: -15.7801, lng: -47.9292 },
         zoom: 5,
         mapTypeId: 'satellite',
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+          style: (window as any).google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+          position: (window as any).google.maps.ControlPosition.TOP_RIGHT,
+          mapTypeIds: ['satellite', 'hybrid', 'roadmap'],
+        },
         streetViewControl: false,
         fullscreenControl: true,
       })
       googleMapRef.current = map
+
+      // Autocomplete de endereço
+      if (!readonly && searchRef.current) {
+        const autocomplete = new (window as any).google.maps.places.Autocomplete(searchRef.current, {
+          componentRestrictions: { country: 'br' },
+          fields: ['geometry', 'name', 'formatted_address'],
+        })
+        autocompleteRef.current = autocomplete
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace()
+          if (!place.geometry?.location) return
+
+          map.setCenter(place.geometry.location)
+          map.setZoom(15)
+
+          // Marcador temporário
+          new (window as any).google.maps.Marker({
+            position: place.geometry.location,
+            map,
+            title: place.name,
+          })
+        })
+      }
 
       if (!readonly) {
         const dm = new (window as any).google.maps.drawing.DrawingManager({
@@ -73,9 +105,8 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
           },
         })
         dm.setMap(map)
-        drawingManagerRef.current = dm
 
-        (window as any).google.maps.event.addListener(dm, 'polygoncomplete', (polygon: any) => {
+        ;(window as any).google.maps.event.addListener(dm, 'polygoncomplete', (polygon: any) => {
           if (polygonRef.current) polygonRef.current.setMap(null)
           polygonRef.current = polygon
           dm.setDrawingMode(null)
@@ -115,7 +146,7 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
       initMap()
     } else {
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=drawing`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=drawing,places`
       script.async = true
       script.onload = initMap
       document.head.appendChild(script)
@@ -136,21 +167,38 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
   return (
     <div className="space-y-2">
       {!readonly && (
-        <div className="flex items-center justify-between bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-3 py-2">
-          <div className="flex items-center gap-2 text-sm">
-            <Info className="w-4 h-4 text-[#4caf50]" />
-            <span className="text-[#6b8f6b]">
-              {hasPolygon ? 'Polígono desenhado. Clique nos vértices para editar.' : 'Clique no ícone de polígono no mapa para desenhar a área.'}
-            </span>
+        <>
+          {/* Barra de busca de endereço */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4d7a4d]" />
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Buscar endereço, fazenda ou município..."
+              className="w-full bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg pl-9 pr-4 py-2.5 text-white placeholder-[#3d5a3d] focus:outline-none focus:border-[#4caf50] transition-colors text-sm"
+            />
           </div>
-          {hasPolygon && (
-            <button onClick={handleClear} className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300">
-              <Trash2 className="w-3.5 h-3.5" /> Limpar
-            </button>
-          )}
-        </div>
+
+          {/* Instruções */}
+          <div className="flex items-center justify-between bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-[#6b8f6b]">
+                {hasPolygon
+                  ? 'Polígono desenhado. Clique nos vértices para editar.'
+                  : 'Busque o endereço acima, depois clique no ícone de polígono para desenhar.'}
+              </span>
+            </div>
+            {hasPolygon && (
+              <button onClick={handleClear} className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300">
+                <Trash2 className="w-3.5 h-3.5" /> Limpar
+              </button>
+            )}
+          </div>
+        </>
       )}
+
       <div ref={mapRef} className="w-full h-[420px] rounded-xl overflow-hidden border border-[#2d3d2d]" />
+
       {hasPolygon && (
         <div className="flex items-center gap-2 bg-[#4caf50]/10 border border-[#4caf50]/30 rounded-lg px-3 py-2">
           <Ruler className="w-4 h-4 text-[#4caf50]" />
