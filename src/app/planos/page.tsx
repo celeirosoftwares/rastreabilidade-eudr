@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Leaf, Check, Loader2, AlertTriangle } from 'lucide-react'
 
-export default function PlanosPage() {
+function PlanosContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
@@ -99,7 +99,7 @@ export default function PlanosPage() {
         <button onClick={handleSubscribe} disabled={loading}
           style={{ width: '100%', background: '#5a9e5a', color: 'white', border: 'none', borderRadius: '10px', padding: '15px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'sans-serif' }}>
           {loading && <Loader2 size={16} />}
-          {loading ? 'Redirecionando para o pagamento...' : 'Assinar por R$397/mês →'}
+          {loading ? 'Redirecionando...' : 'Assinar por R$397/mês →'}
         </button>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '14px', flexWrap: 'wrap' }}>
@@ -117,5 +117,13 @@ export default function PlanosPage() {
         Sair da conta
       </button>
     </div>
+  )
+}
+
+export default function PlanosPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0d0f0d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4d7a4d', fontSize: '14px' }}>Carregando...</div>}>
+      <PlanosContent />
+    </Suspense>
   )
 }
