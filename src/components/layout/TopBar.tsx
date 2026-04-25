@@ -27,19 +27,18 @@ export default function TopBar({ user }: { user: any }) {
       borderBottom: '1px solid var(--border-soft)',
       display: 'flex', alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 24px',
-    }}>
+      padding: '0 20px 0 64px',
+    }} className="topbar">
       <div>
         <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px' }}>{title}</div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'capitalize' }}>{date}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'capitalize' }} className="topbar-date">{date}</div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button style={{
           width: '32px', height: '32px', borderRadius: '8px',
           background: 'var(--bg-raised)', border: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}>
           <Bell size={14} color="var(--text-secondary)" />
         </button>
@@ -53,6 +52,13 @@ export default function TopBar({ user }: { user: any }) {
           </span>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .topbar { padding: 0 16px 0 64px !important; }
+          .topbar-date { display: none; }
+        }
+      `}</style>
     </header>
   )
 }

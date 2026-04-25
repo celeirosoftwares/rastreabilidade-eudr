@@ -35,22 +35,76 @@ html, body {
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
 .font-mono { font-family: 'DM Mono', monospace; }
 
+/* ── RESPONSIVO MOBILE ── */
+@media (max-width: 768px) {
+
+  /* Grid de 2 colunas vira 1 coluna */
+  .grid-cols-2 { grid-template-columns: 1fr !important; }
+  
+  /* Padding de páginas */
+  main { padding: 16px !important; }
+
+  /* Cards de métricas em 2 colunas no mobile */
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Tabelas e listas ficam scroll horizontal */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Botões em coluna no mobile */
+  .btn-group-mobile {
+    flex-direction: column !important;
+    width: 100%;
+  }
+
+  .btn-group-mobile a,
+  .btn-group-mobile button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Forms em coluna */
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Headers de página */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .page-header a,
+  .page-header button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Mapa menor no mobile */
+  .map-container {
+    height: 280px !important;
+  }
+
+  /* Cards em coluna */
+  .cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Relatório em coluna */
+  .report-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 @media print {
-  /* Esconde tudo exceto o documento */
   body { background: white !important; }
   aside, header, .no-print { display: none !important; }
   main { padding: 0 !important; overflow: visible !important; }
-  
-  /* O documento ocupa a página inteira */
-  #dds {
-    max-width: 100% !important;
-    border-radius: 0 !important;
-    padding: 20mm 20mm !important;
-    box-shadow: none !important;
-  }
-
-  @page {
-    margin: 0;
-    size: A4;
-  }
+  #dds { max-width: 100% !important; border-radius: 0 !important; padding: 20mm !important; }
+  @page { margin: 0; size: A4; }
 }
