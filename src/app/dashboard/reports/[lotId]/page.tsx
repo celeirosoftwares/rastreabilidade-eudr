@@ -44,19 +44,19 @@ export default function ReportDetailPage() {
     function initMap() {
       if (!mapRef.current) return
       const coords = lot.area.geojson.geometry.coordinates[0].map((c: number[]) => ({ lat: c[1], lng: c[0] }))
-      const map = new google.maps.Map(mapRef.current, {
+      const map = new (window as any).google.maps.Map(mapRef.current, {
         center: coords[0], zoom: 15, mapTypeId: 'satellite', streetViewControl: false,
       })
-      new google.maps.Polygon({
+      new (window as any).google.maps.Polygon({
         paths: coords, fillColor: '#4caf50', fillOpacity: 0.3,
         strokeColor: '#4caf50', strokeWeight: 2, map,
       })
-      const bounds = new google.maps.LatLngBounds()
+      const bounds = new (window as any).google.maps.LatLngBounds()
       coords.forEach((c: any) => bounds.extend(c))
       map.fitBounds(bounds, 60)
     }
 
-    if (window.google?.maps) initMap()
+    if ((window as any).google?.maps) initMap()
     else {
       const script = document.createElement('script')
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=drawing`
@@ -87,129 +87,150 @@ export default function ReportDetailPage() {
   const percent = Math.round((passed / total) * 100)
   const scoreColor = percent === 100 ? '#5a9e5a' : percent >= 60 ? '#d4a017' : '#c0392b'
 
+  const card = { background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }
+
   return (
     <div style={{ maxWidth: '900px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/dashboard/reports" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+          <Link href="/dashboard/reports" style={{ color: 'var(--text-secondary)', textDecoration: 'none', flexShrink: 0 }}>
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h2 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600 }}>Relatório de Conformidade EUDR</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '2px' }}>
-              Gerado em {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+            <h2 style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600 }}>Relatório EUDR</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '2px' }}>
+              {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
         </div>
         <a href={`/dashboard/reports/dds/${lotId}`} target="_blank" rel="noopener noreferrer"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', color: 'white', textDecoration: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 500 }}>
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', color: 'white', textDecoration: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap' }}>
           <FileText size={14} />
-          Gerar DDS (Due Diligence Statement)
+          Gerar DDS
         </a>
       </div>
 
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
+      {/* Score */}
+      <div style={{ ...card, marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Regulamento UE 2023/1115</div>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
               {CROP_LABELS[lot.crop_type] ?? lot.crop_type}{lot.harvest_year ? ` — Safra ${lot.harvest_year}` : ''}
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>{property?.name ?? '—'}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{property?.name ?? '—'}</div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '36px', fontWeight: 700, color: scoreColor, lineHeight: 1 }}>{percent}%</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>conformidade</div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{ fontSize: '32px', fontWeight: 700, color: scoreColor, lineHeight: 1 }}>{percent}%</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>conformidade</div>
           </div>
         </div>
-        <div style={{ marginTop: '16px', height: '4px', background: 'var(--bg-muted)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ marginTop: '14px', height: '4px', background: 'var(--bg-muted)', borderRadius: '2px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${percent}%`, background: scoreColor, borderRadius: '2px' }} />
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px' }}>Checklist EUDR</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { label: 'Propriedade cadastrada', ok: checks.hasProperty },
-                { label: 'CPF/CNPJ do produtor', ok: checks.hasDocument },
-                { label: 'Número do CAR', ok: checks.hasCar, warning: !checks.hasCar },
-                { label: 'Área georreferenciada', ok: checks.hasArea },
-                { label: 'Evento de plantio', ok: checks.hasPlanting },
-                { label: 'Evento de colheita', ok: checks.hasHarvest, warning: !checks.hasHarvest },
-              ].map(({ label, ok, warning }: any) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {ok ? <CheckCircle2 size={15} color="#5a9e5a" />
-                    : warning ? <AlertTriangle size={15} color="#d4a017" />
-                    : <XCircle size={15} color="#c0392b" />}
-                  <span style={{ fontSize: '12px', color: ok ? 'var(--text-secondary)' : warning ? '#d4a017' : '#c0392b' }}>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Conteúdo — empilhado no mobile */}
+      <div className="report-columns">
 
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>Dados do Produtor</div>
+        {/* Checklist */}
+        <div style={card}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px' }}>Checklist EUDR</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[
-              { l: 'Produtor', v: property?.owner_name },
-              { l: 'Documento', v: property?.document_id },
-              { l: 'Propriedade', v: property?.name },
-              { l: 'CAR', v: property?.car_number ?? 'Não informado' },
-              { l: 'Município', v: property?.municipality ? `${property.municipality}/${property.state}` : property?.state },
-            ].map(({ l, v }) => (
-              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '5px 0', borderBottom: '1px solid var(--border-soft)' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{l}</span>
-                <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500, textAlign: 'right' }}>{v ?? '—'}</span>
+              { label: 'Propriedade cadastrada', ok: checks.hasProperty },
+              { label: 'CPF/CNPJ do produtor', ok: checks.hasDocument },
+              { label: 'Número do CAR', ok: checks.hasCar, warning: !checks.hasCar },
+              { label: 'Área georreferenciada', ok: checks.hasArea },
+              { label: 'Evento de plantio', ok: checks.hasPlanting },
+              { label: 'Evento de colheita', ok: checks.hasHarvest, warning: !checks.hasHarvest },
+            ].map(({ label, ok, warning }: any) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {ok ? <CheckCircle2 size={15} color="#5a9e5a" />
+                  : warning ? <AlertTriangle size={15} color="#d4a017" />
+                  : <XCircle size={15} color="#c0392b" />}
+                <span style={{ fontSize: '12px', color: ok ? 'var(--text-secondary)' : warning ? '#d4a017' : '#c0392b' }}>{label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {area?.geojson && (
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                Geolocalização — {area.name}
-              </div>
-              <div ref={mapRef} style={{ width: '100%', height: '280px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }} />
-              {area.size_hectares && (
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  Área total: <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{Number(area.size_hectares).toFixed(4)} ha</span>
-                </p>
-              )}
+        {/* Dados do Produtor */}
+        <div style={card}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>Dados do Produtor</div>
+          {[
+            { l: 'Produtor', v: property?.owner_name },
+            { l: 'Documento', v: property?.document_id },
+            { l: 'Propriedade', v: property?.name },
+            { l: 'CAR', v: property?.car_number ?? 'Não informado' },
+            { l: 'Município', v: property?.municipality ? `${property.municipality}/${property.state}` : property?.state },
+          ].map(({ l, v }) => (
+            <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', padding: '5px 0', borderBottom: '1px solid var(--border-soft)', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>{l}</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500, textAlign: 'right', wordBreak: 'break-all' }}>{v ?? '—'}</span>
             </div>
-          )}
+          ))}
+        </div>
 
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-soft)', borderRadius: '12px', padding: '20px' }}>
+        {/* Mapa */}
+        {area?.geojson && (
+          <div style={card}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
-              Cadeia de Custódia — {events.length} evento{events.length !== 1 ? 's' : ''}
+              Geolocalização — {area.name}
             </div>
-            {events.length === 0 ? (
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Nenhum evento registrado.</p>
-            ) : (
-              <div style={{ position: 'relative', paddingLeft: '20px' }}>
-                <div style={{ position: 'absolute', left: '5px', top: '6px', bottom: '6px', width: '1px', background: 'var(--border)' }} />
-                {events.map((e: any) => (
-                  <div key={e.id} style={{ position: 'relative', marginBottom: '12px' }}>
-                    <div style={{ position: 'absolute', left: '-18px', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg-surface)' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{EVENT_LABELS[e.type] ?? e.type}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(e.date).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                    {e.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{e.description}</p>}
-                  </div>
-                ))}
-              </div>
+            <div ref={mapRef} style={{ width: '100%', height: '240px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }} />
+            {area.size_hectares && (
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                Área total: <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{Number(area.size_hectares).toFixed(4)} ha</span>
+              </p>
             )}
           </div>
+        )}
 
-          <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-soft)', borderRadius: '10px', padding: '14px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'var(--text-secondary)' }}>Aviso Legal:</strong> Este relatório foi gerado automaticamente pela plataforma RastreiO. O produtor é responsável pela veracidade das informações conforme o Artigo 3 do Regulamento (UE) 2023/1115.
+        {/* Eventos */}
+        <div style={card}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '12px' }}>
+            Cadeia de Custódia — {events.length} evento{events.length !== 1 ? 's' : ''}
           </div>
+          {events.length === 0 ? (
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Nenhum evento registrado.</p>
+          ) : (
+            <div style={{ position: 'relative', paddingLeft: '20px' }}>
+              <div style={{ position: 'absolute', left: '5px', top: '6px', bottom: '6px', width: '1px', background: 'var(--border)' }} />
+              {events.map((e: any) => (
+                <div key={e.id} style={{ position: 'relative', marginBottom: '12px' }}>
+                  <div style={{ position: 'absolute', left: '-18px', top: '4px', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg-surface)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{EVENT_LABELS[e.type] ?? e.type}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(e.date).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                  {e.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{e.description}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Aviso legal */}
+        <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-soft)', borderRadius: '10px', padding: '14px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--text-secondary)' }}>Aviso Legal:</strong> Este relatório foi gerado automaticamente pela plataforma RastreiO. O produtor é responsável pela veracidade das informações conforme o Artigo 3 do Regulamento (UE) 2023/1115.
         </div>
       </div>
+
+      <style>{`
+        .report-columns {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        @media (max-width: 768px) {
+          .report-columns {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

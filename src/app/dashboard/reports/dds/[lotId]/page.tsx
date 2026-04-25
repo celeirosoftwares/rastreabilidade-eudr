@@ -24,10 +24,7 @@ const EVENT_LABELS: Record<string, string> = {
 function genVerifyId(c: string, y: number) {
   return `VERIFY-${c.substring(0,3).toUpperCase()}-${y}-${Math.random().toString(36).substring(2,8).toUpperCase()}`
 }
-
-function genSigId() {
-  return 'SIG-' + Math.random().toString(36).substring(2,10).toUpperCase()
-}
+function genSigId() { return 'SIG-' + Math.random().toString(36).substring(2,10).toUpperCase() }
 
 export default function DDSPage() {
   const { lotId } = useParams()
@@ -45,39 +42,23 @@ export default function DDSPage() {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-
       const [lotRes, userRes] = await Promise.all([
         supabase.from('lots').select('*, property:properties(*), area:areas(*), events(*)').eq('id', lotId).single(),
         supabase.from('users').select('*, organization:organizations(*)').eq('id', session.user.id).single(),
       ])
-
       setLot(lotRes.data)
       setOrg(userRes.data)
 
-      // Buscar DDS existente para este lote
-      const { data: existing, error: fetchError } = await supabase
-        .from('dds_documents')
-        .select('verify_id')
-        .eq('lot_id', lotId)
-        .limit(1)
+      const { data: existing } = await supabase
+        .from('dds_documents').select('verify_id').eq('lot_id', lotId).limit(1)
 
-      if (!fetchError && existing && existing.length > 0) {
+      if (existing && existing.length > 0) {
         setVerifyId(existing[0].verify_id)
       } else {
-        // Criar novo
-        const newVerifyId = genVerifyId(
-          lotRes.data?.crop_type ?? 'other',
-          lotRes.data?.harvest_year ?? new Date().getFullYear()
-        )
+        const newVerifyId = genVerifyId(lotRes.data?.crop_type ?? 'other', lotRes.data?.harvest_year ?? new Date().getFullYear())
         setVerifyId(newVerifyId)
-
-        await supabase.from('dds_documents').insert({
-          verify_id: newVerifyId,
-          lot_id: lotId,
-          generated_by: session.user.id,
-        })
+        await supabase.from('dds_documents').insert({ verify_id: newVerifyId, lot_id: lotId, generated_by: session.user.id })
       }
-
       setLoading(false)
     }
     load()
@@ -88,31 +69,26 @@ export default function DDSPage() {
     setGenerating(true)
     try {
       const html2pdf = (await import('html2pdf.js')).default
-      const opt = {
+      await html2pdf().set({
         margin: [15, 15, 15, 15],
         filename: `DDS-EUDR-${verifyId}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      }
-      await html2pdf().set(opt).from(docRef.current).save()
-    } catch (err) {
-      console.error('Erro ao gerar PDF:', err)
-    } finally {
-      setGenerating(false)
-    }
+      }).from(docRef.current).save()
+    } catch (err) { console.error(err) }
+    finally { setGenerating(false) }
   }
 
   function copyVerifyLink() {
-    const url = `${window.location.origin}/verificar/${verifyId}`
-    navigator.clipboard.writeText(url)
+    navigator.clipboard.writeText(`${window.location.origin}/verificar/${verifyId}`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
 
   if (loading) return <div style={{padding:'40px',fontFamily:'sans-serif',color:'#333'}}>Carregando...</div>
-  if (!lot) return <div style={{padding:'40px',fontFamily:'sans-serif',color:'red'}}>Lote não encontrado.</div>
+  if (!lot) return <div style={{padding:'40px',color:'red'}}>Lote não encontrado.</div>
 
   const property = lot.property
   const area = lot.area
@@ -123,63 +99,69 @@ export default function DDSPage() {
   const year = lot.harvest_year ?? new Date().getFullYear()
   const lotCode = `LOT-${lot.crop_type.substring(0,3).toUpperCase()}-${year}-${lot.id.substring(0,6).toUpperCase()}`
   const meta = lot.metadata ?? {}
-  const volumeKg = meta.bags_quantity && meta.bag_weight_kg
-    ? `${(meta.bags_quantity * meta.bag_weight_kg).toLocaleString()} kg`
-    : 'Não informado'
+  const volumeKg = meta.bags_quantity && meta.bag_weight_kg ? `${(meta.bags_quantity * meta.bag_weight_kg).toLocaleString()} kg` : 'Não informado'
   const geojsonStr = area?.geojson ? JSON.stringify(area.geojson.geometry, null, 2) : '—'
   const verifyUrl = typeof window !== 'undefined' ? `${window.location.origin}/verificar/${verifyId}` : ''
 
   const Row = ({ l, v }: { l: string; v: string }) => (
-    <div style={{display:'flex',gap:'8px',padding:'4px 0',borderBottom:'1px solid #eee',fontSize:'9pt'}}>
-      <span style={{fontWeight:600,minWidth:'200px',color:'#333',flexShrink:0}}>{l}:</span>
-      <span style={{color:'#1a1a1a'}}>{v}</span>
+    <div style={{display:'flex',gap:'8px',padding:'4px 0',borderBottom:'1px solid #eee',fontSize:'9pt',flexWrap:'wrap'}}>
+      <span style={{fontWeight:600,minWidth:'160px',color:'#333',flexShrink:0}}>{l}:</span>
+      <span style={{color:'#1a1a1a',wordBreak:'break-word',flex:1}}>{v}</span>
     </div>
   )
 
   const Section = ({ n, t, children }: any) => (
-    <div style={{marginBottom:'16px',pageBreakInside:'avoid'}}>
-      <div style={{background:'#1a3a1a',color:'white',padding:'5px 10px',fontSize:'9pt',fontWeight:700,letterSpacing:'0.5px',marginBottom:'8px'}}>
-        {n}. {t}
-      </div>
-      <div style={{paddingLeft:'2px'}}>{children}</div>
+    <div style={{marginBottom:'14px',pageBreakInside:'avoid'}}>
+      <div style={{background:'#1a3a1a',color:'white',padding:'5px 10px',fontSize:'9pt',fontWeight:700,marginBottom:'8px'}}>{n}. {t}</div>
+      <div>{children}</div>
     </div>
   )
 
   const BL = ({ items }: { items: string[] }) => (
-    <ul style={{paddingLeft:'18px',margin:'4px 0'}}>
+    <ul style={{paddingLeft:'16px',margin:'4px 0'}}>
       {items.map((item, i) => <li key={i} style={{fontSize:'9pt',color:'#333',padding:'1px 0'}}>{item}</li>)}
     </ul>
   )
 
   return (
     <>
-      <div style={{background:'#1a3a1a',padding:'12px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',position:'sticky',top:0,zIndex:100}}>
-        <Link href={`/dashboard/reports/${lotId}`} style={{display:'flex',alignItems:'center',gap:'6px',color:'#a0c8a0',fontSize:'13px',textDecoration:'none'}}>
+      {/* Barra de ação */}
+      <div style={{background:'#1a3a1a',padding:'10px 16px',display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap',position:'sticky',top:0,zIndex:100}}>
+        <Link href={`/dashboard/reports/${lotId}`} style={{display:'flex',alignItems:'center',gap:'6px',color:'#a0c8a0',fontSize:'13px',textDecoration:'none',marginRight:'auto'}}>
           <ArrowLeft size={15}/> Voltar
         </Link>
-        <div style={{color:'white',fontSize:'13px',fontWeight:600}}>DDS — Declaração de Devida Diligência EUDR</div>
-        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-          <button onClick={copyVerifyLink}
-            style={{display:'flex',alignItems:'center',gap:'6px',background:copied?'#2d5a2d':'#1f3a1f',color:copied?'#5a9e5a':'#a0c8a0',border:'1px solid #2d5a2d',borderRadius:'6px',padding:'7px 12px',fontSize:'12px',cursor:'pointer'}}>
-            <Link2 size={13}/>
-            {copied ? 'Copiado!' : 'Copiar link'}
-          </button>
-          <button onClick={handleDownload} disabled={generating}
-            style={{display:'flex',alignItems:'center',gap:'6px',background:'#4caf50',color:'white',border:'none',borderRadius:'6px',padding:'7px 16px',fontSize:'13px',fontWeight:500,cursor:generating?'not-allowed':'pointer',opacity:generating?0.7:1}}>
-            {generating ? <Loader2 size={14}/> : <Download size={14}/>}
-            {generating ? 'Gerando...' : 'Baixar PDF'}
-          </button>
-        </div>
+        <button onClick={copyVerifyLink}
+          style={{display:'flex',alignItems:'center',gap:'6px',background:copied?'#2d5a2d':'#1f3a1f',color:copied?'#5a9e5a':'#a0c8a0',border:'1px solid #2d5a2d',borderRadius:'6px',padding:'7px 10px',fontSize:'12px',cursor:'pointer'}}>
+          <Link2 size={13}/>
+          {copied ? 'Copiado!' : 'Copiar link'}
+        </button>
+        <button onClick={handleDownload} disabled={generating}
+          style={{display:'flex',alignItems:'center',gap:'6px',background:'#4caf50',color:'white',border:'none',borderRadius:'6px',padding:'7px 14px',fontSize:'13px',fontWeight:500,cursor:generating?'not-allowed':'pointer',opacity:generating?0.7:1}}>
+          {generating ? <Loader2 size={14}/> : <Download size={14}/>}
+          {generating ? 'Gerando...' : 'Baixar PDF'}
+        </button>
       </div>
 
-      <div style={{padding:'24px',background:'#f0f0f0',minHeight:'100vh'}}>
-        <div ref={docRef} style={{background:'white',color:'#1a1a1a',fontFamily:'Arial,sans-serif',fontSize:'10pt',lineHeight:'1.6',padding:'20mm',maxWidth:'210mm',margin:'0 auto',boxShadow:'0 2px 20px rgba(0,0,0,0.15)'}}>
+      {/* Preview */}
+      <div style={{padding:'16px',background:'#f0f0f0',minHeight:'100vh',overflowX:'hidden'}}>
+        <div ref={docRef} style={{
+          background:'white',color:'#1a1a1a',
+          fontFamily:'Arial,sans-serif',fontSize:'10pt',lineHeight:'1.6',
+          padding:'clamp(12px, 4vw, 20mm)',
+          maxWidth:'210mm',width:'100%',
+          margin:'0 auto',
+          boxShadow:'0 2px 20px rgba(0,0,0,0.15)',
+          boxSizing:'border-box',
+          overflowWrap:'break-word',
+          wordBreak:'break-word',
+        }}>
 
-          <div style={{borderBottom:'3px solid #1a3a1a',paddingBottom:'16px',marginBottom:'20px',textAlign:'center'}}>
-            <div style={{fontSize:'8pt',fontWeight:700,letterSpacing:'2px',color:'#2d6a2d',textTransform:'uppercase',marginBottom:'6px'}}>Regulamento da União Europeia sobre Desmatamento</div>
-            <div style={{fontSize:'16pt',fontWeight:700,marginBottom:'3px'}}>DECLARAÇÃO DE DEVIDA DILIGÊNCIA</div>
-            <div style={{fontSize:'9pt',color:'#555',marginBottom:'10px'}}>Regulamento (UE) 2023/1115 — Artigo 4</div>
-            <div style={{display:'inline-block',padding:'5px 14px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'9pt',color:'#2d6a2d',fontWeight:600}}>ID: {verifyId}</div>
+          {/* Cabeçalho */}
+          <div style={{borderBottom:'3px solid #1a3a1a',paddingBottom:'14px',marginBottom:'18px',textAlign:'center'}}>
+            <div style={{fontSize:'8pt',fontWeight:700,letterSpacing:'1px',color:'#2d6a2d',textTransform:'uppercase',marginBottom:'4px'}}>Regulamento da União Europeia sobre Desmatamento</div>
+            <div style={{fontSize:'14pt',fontWeight:700,marginBottom:'3px'}}>DECLARAÇÃO DE DEVIDA DILIGÊNCIA</div>
+            <div style={{fontSize:'9pt',color:'#555',marginBottom:'8px'}}>Regulamento (UE) 2023/1115 — Artigo 4</div>
+            <div style={{display:'inline-block',padding:'4px 12px',background:'#f0f7f0',border:'1px solid #2d6a2d',borderRadius:'3px',fontSize:'8pt',color:'#2d6a2d',fontWeight:600,wordBreak:'break-all'}}>ID: {verifyId}</div>
             <div style={{marginTop:'4px',fontSize:'8pt',color:'#888'}}>Gerado em: {today}</div>
           </div>
 
@@ -197,7 +179,7 @@ export default function DDSPage() {
             <Row l="Quantidade" v={volumeKg}/>
             <Row l="ID do Lote" v={lotCode}/>
             <Row l="Ano de Safra" v={String(year)}/>
-            {meta.processing_type && <Row l="Método de Processamento" v={String(meta.processing_type)}/>}
+            {meta.processing_type && <Row l="Processamento" v={String(meta.processing_type)}/>}
             {meta.variety && <Row l="Variedade" v={String(meta.variety)}/>}
           </Section>
 
@@ -213,11 +195,11 @@ export default function DDSPage() {
             <Row l="CPF / CNPJ" v={property?.document_id ?? '—'}/>
             <Row l="Número do CAR" v={property?.car_number ?? 'Não informado'}/>
             <Row l="Nome da Área" v={area?.name ?? '—'}/>
-            <Row l="Tamanho da Área" v={area?.size_hectares ? `${Number(area.size_hectares).toFixed(4)} hectares` : '—'}/>
+            <Row l="Tamanho da Área" v={area?.size_hectares ? `${Number(area.size_hectares).toFixed(4)} ha` : '—'}/>
             {area?.geojson && (
               <div style={{marginTop:'8px'}}>
                 <div style={{fontSize:'9pt',fontWeight:600,color:'#333',marginBottom:'4px'}}>Polígono GeoJSON:</div>
-                <pre style={{background:'#f5f5f5',border:'1px solid #ddd',borderRadius:'3px',padding:'8px',fontSize:'7pt',fontFamily:'monospace',whiteSpace:'pre-wrap',wordBreak:'break-all',margin:0}}>{geojsonStr}</pre>
+                <pre style={{background:'#f5f5f5',border:'1px solid #ddd',borderRadius:'3px',padding:'8px',fontSize:'7pt',fontFamily:'monospace',whiteSpace:'pre-wrap',wordBreak:'break-all',margin:0,overflowX:'hidden'}}>{geojsonStr}</pre>
               </div>
             )}
           </Section>
@@ -231,8 +213,8 @@ export default function DDSPage() {
               {events.length === 0
                 ? <div style={{fontSize:'9pt',color:'#888'}}>Nenhum evento registrado.</div>
                 : events.map((e: any) => (
-                  <div key={e.id} style={{display:'flex',gap:'10px',padding:'3px 0',borderBottom:'1px solid #eee',fontSize:'9pt'}}>
-                    <span style={{fontWeight:600,minWidth:'170px',color:'#333',flexShrink:0}}>{EVENT_LABELS[e.type] ?? e.type}:</span>
+                  <div key={e.id} style={{display:'flex',gap:'8px',padding:'3px 0',borderBottom:'1px solid #eee',fontSize:'9pt',flexWrap:'wrap'}}>
+                    <span style={{fontWeight:600,color:'#333',flexShrink:0}}>{EVENT_LABELS[e.type] ?? e.type}:</span>
                     <span>{e.date}</span>
                     {e.description && <span style={{color:'#666'}}>— {e.description}</span>}
                   </div>
@@ -264,7 +246,7 @@ export default function DDSPage() {
           </Section>
 
           <Section n="9" t="MEDIDAS DE MITIGAÇÃO DE RISCO">
-            <p style={{fontSize:'9pt'}}>Dado o risco <strong>BAIXO</strong>, os procedimentos padrão são suficientes.</p>
+            <p style={{fontSize:'9pt'}}>Dado o risco <strong>BAIXO</strong>, os procedimentos padrão são suficientes. Não foram necessárias medidas adicionais.</p>
           </Section>
 
           <Section n="10" t="DECLARAÇÃO DE CONFORMIDADE">
