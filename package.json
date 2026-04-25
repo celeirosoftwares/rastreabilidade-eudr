@@ -24,7 +24,8 @@
     "date-fns": "^3.6.0",
     "recharts": "^2.12.7",
     "sonner": "^1.4.41",
-    "html2pdf.js": "^0.10.2"
+    "html2pdf.js": "^0.10.2",
+    "stripe": "^14.21.0"
   },
   "devDependencies": {
     "typescript": "^5",
