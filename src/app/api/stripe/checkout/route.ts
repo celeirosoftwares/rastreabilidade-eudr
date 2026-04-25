@@ -1,67 +1,70 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
 
-export async function POST() {
-  const cookieStore = cookies()
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {}
-        },
-      },
+export async function POST(req: NextRequest) {
+  try {
+    // Pega o token do header Authorization
+    const authHeader = req.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+
+    if (!token) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
-  )
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    // Verifica o token com o service role
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+    if (error || !user) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('*, organization:organizations(*)')
-    .eq('id', session.user.id)
-    .single()
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('*, organization:organizations(*)')
+      .eq('id', user.id)
+      .single()
 
-  if (!user) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    if (!userData) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
 
-  let customerId = user.organization?.stripe_customer_id
+    let customerId = userData.organization?.stripe_customer_id
 
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email,
-      name: user.organization?.name,
-      metadata: { organization_id: user.organization_id },
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: userData.email,
+        name: userData.organization?.name,
+        metadata: { organization_id: userData.organization_id },
+      })
+      customerId = customer.id
+
+      await supabaseAdmin
+        .from('organizations')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', userData.organization_id)
+    }
+
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID!, quantity: 1 }],
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?subscribed=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/planos?canceled=true`,
+      locale: 'pt-BR',
+      subscription_data: {
+        metadata: { organization_id: userData.organization_id },
+      },
     })
-    customerId = customer.id
 
-    await supabase
-      .from('organizations')
-      .update({ stripe_customer_id: customerId })
-      .eq('id', user.organization_id)
+    return NextResponse.json({ url: checkoutSession.url })
+  } catch (err: any) {
+    console.error('Checkout error:', err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
-
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID!, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?subscribed=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/planos?canceled=true`,
-    locale: 'pt-BR',
-    subscription_data: {
-      metadata: { organization_id: user.organization_id },
-    },
-  })
-
-  return NextResponse.json({ url: checkoutSession.url })
 }

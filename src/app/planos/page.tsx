@@ -23,10 +23,26 @@ function PlanosContent() {
   async function handleSubscribe() {
     setLoading(true)
     try {
-      const res = await fetch('/api/stripe/checkout', { method: 'POST' })
-      const { url } = await res.json()
-      if (url) window.location.href = url
-    } catch {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/auth/login'); return }
+
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        console.error('Erro:', data.error)
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Erro:', err)
       setLoading(false)
     }
   }
