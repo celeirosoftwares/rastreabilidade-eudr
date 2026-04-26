@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Ruler, Trash2, Search } from 'lucide-react'
+import { Ruler, Trash2, Info, Search } from 'lucide-react'
 
 interface AreaMapProps {
   initialGeojson?: any
@@ -11,14 +11,22 @@ interface AreaMapProps {
 
 function calculateAreaHectares(coords: [number, number][]): number {
   if (!coords || coords.length < 3) return 0
+
+  // Fórmula de Shoelace em coordenadas esféricas (mais precisa)
+  const R = 6371000 // raio da Terra em metros
   let area = 0
-  for (let i = 0; i < coords.length - 1; i++) {
-    area += coords[i][0] * coords[i + 1][1]
-    area -= coords[i + 1][0] * coords[i][1]
+  const n = coords.length
+
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    const lat1 = coords[i][1] * Math.PI / 180
+    const lat2 = coords[j][1] * Math.PI / 180
+    const dLon = (coords[j][0] - coords[i][0]) * Math.PI / 180
+    area += dLon * (2 + Math.sin(lat1) + Math.sin(lat2))
   }
-  area = Math.abs(area) / 2
-  const metersSquared = area * 111320 * 111320 * Math.cos((coords[0][1] * Math.PI) / 180)
-  return metersSquared / 10000
+
+  area = Math.abs(area * R * R / 2)
+  return area / 10000 // m² para hectares
 }
 
 export default function AreaMap({ initialGeojson, onPolygonChange, readonly = false }: AreaMapProps) {
@@ -26,7 +34,6 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
   const searchRef = useRef<HTMLInputElement>(null)
   const googleMapRef = useRef<any>(null)
   const polygonRef = useRef<any>(null)
-  const autocompleteRef = useRef<any>(null)
   const [hectares, setHectares] = useState(0)
   const [hasPolygon, setHasPolygon] = useState(false)
 
@@ -66,22 +73,17 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
       })
       googleMapRef.current = map
 
-      // Autocomplete de endereço
       if (!readonly && searchRef.current) {
         const autocomplete = new (window as any).google.maps.places.Autocomplete(searchRef.current, {
           componentRestrictions: { country: 'br' },
           fields: ['geometry', 'name', 'formatted_address'],
         })
-        autocompleteRef.current = autocomplete
 
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace()
           if (!place.geometry?.location) return
-
           map.setCenter(place.geometry.location)
-          map.setZoom(15)
-
-          // Marcador temporário
+          map.setZoom(16)
           new (window as any).google.maps.Marker({
             position: place.geometry.location,
             map,
@@ -130,12 +132,16 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
         strokeColor: '#4caf50', strokeWeight: 2, editable, map,
       })
       polygonRef.current = polygon
-      const ha = calculateAreaHectares(geojson.geometry.coordinates[0].map((c: number[]) => [c[0], c[1]]))
+
+      const rawCoords: [number, number][] = geojson.geometry.coordinates[0].map((c: number[]) => [c[0], c[1]])
+      const ha = calculateAreaHectares(rawCoords)
       setHectares(ha)
       setHasPolygon(true)
+
       const bounds = new (window as any).google.maps.LatLngBounds()
       coords.forEach((c: any) => bounds.extend(c))
       map.fitBounds(bounds, 60)
+
       if (editable) {
         polygon.getPath().addListener('set_at', () => handlePolygonUpdate(polygon))
         polygon.getPath().addListener('insert_at', () => handlePolygonUpdate(polygon))
@@ -168,7 +174,6 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
     <div className="space-y-2">
       {!readonly && (
         <>
-          {/* Barra de busca de endereço */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4d7a4d]" />
             <input
@@ -179,9 +184,9 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
             />
           </div>
 
-          {/* Instruções */}
           <div className="flex items-center justify-between bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-3 py-2">
             <div className="flex items-center gap-2 text-sm">
+              <Info className="w-4 h-4 text-[#4caf50]" />
               <span className="text-[#6b8f6b]">
                 {hasPolygon
                   ? 'Polígono desenhado. Clique nos vértices para editar.'
@@ -203,7 +208,7 @@ export default function AreaMap({ initialGeojson, onPolygonChange, readonly = fa
         <div className="flex items-center gap-2 bg-[#4caf50]/10 border border-[#4caf50]/30 rounded-lg px-3 py-2">
           <Ruler className="w-4 h-4 text-[#4caf50]" />
           <span className="text-[#4caf50] text-sm font-medium">
-            Área aproximada: <strong>{hectares.toFixed(2)} hectares</strong>
+            Área aproximada: <strong>{hectares.toFixed(4)} hectares</strong>
           </span>
         </div>
       )}
