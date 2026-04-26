@@ -3,9 +3,10 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'RastreiO — Rastreabilidade EUDR',
-  description: 'Plataforma de rastreabilidade agrícola para conformidade com o Regulamento EUDR.',
+  description: 'Plataforma brasileira de rastreabilidade agrícola para conformidade com o Regulamento EUDR da União Europeia.',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
+    apple: '/favicon.png',
   },
 }
 
