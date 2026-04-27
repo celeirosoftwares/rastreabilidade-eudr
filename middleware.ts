@@ -23,13 +23,13 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  const isAuthRoute    = pathname.startsWith('/auth')
-  const isPlanosRoute  = pathname.startsWith('/planos')
-  const isApiRoute     = pathname.startsWith('/api')
-  const isVerifyRoute  = pathname.startsWith('/verificar')
-  const isPublicRoute  = pathname === '/'
+  const isAuthRoute   = pathname.startsWith('/auth')
+  const isApiRoute    = pathname.startsWith('/api')
+  const isVerifyRoute = pathname.startsWith('/verificar')
+  const isPlanosRoute = pathname.startsWith('/planos')
+  const isPublicRoute = pathname === '/'
 
-  // Rotas que não precisam de verificação
+  // Rotas públicas — sem verificação
   if (isAuthRoute || isApiRoute || isVerifyRoute || isPublicRoute) {
     return supabaseResponse
   }
@@ -41,75 +41,42 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Usuário autenticado tentando acessar login
-  if (session && isAuthRoute) {
+  // Buscar dados da organização
+  const { data: user } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('id', session.user.id)
+    .single()
+
+  let hasAccess = false
+
+  if (user?.organization_id) {
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('subscription_status, subscription_ends_at')
+      .eq('id', user.organization_id)
+      .single()
+
+    const status = org?.subscription_status
+    const endsAt = org?.subscription_ends_at
+
+    hasAccess =
+      status === 'active' ||
+      (status === 'canceling' && endsAt && new Date(endsAt) > new Date())
+  }
+
+  // Sem assinatura → redireciona para /planos (exceto se já estiver lá)
+  if (!hasAccess && pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/planos'
     return NextResponse.redirect(url)
   }
 
-  // Verificar assinatura para rotas do dashboard
-  if (pathname.startsWith('/dashboard')) {
-    const { data: user } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (user?.organization_id) {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('subscription_status, subscription_ends_at')
-        .eq('id', user.organization_id)
-        .single()
-
-      const status = org?.subscription_status
-      const endsAt = org?.subscription_ends_at
-
-      // Verifica se tem acesso:
-      // - active: acesso total
-      // - canceling: acesso até subscription_ends_at
-      // - inactive ou null: sem acesso
-      const hasAccess =
-        status === 'active' ||
-        (status === 'canceling' && endsAt && new Date(endsAt) > new Date())
-
-      if (!hasAccess) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/planos'
-        return NextResponse.redirect(url)
-      }
-    }
-  }
-
-  // Na página de planos mas já tem assinatura ativa → dashboard
-  if (isPlanosRoute && session) {
-    const { data: user } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (user?.organization_id) {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('subscription_status, subscription_ends_at')
-        .eq('id', user.organization_id)
-        .single()
-
-      const status = org?.subscription_status
-      const endsAt = org?.subscription_ends_at
-
-      const hasAccess =
-        status === 'active' ||
-        (status === 'canceling' && endsAt && new Date(endsAt) > new Date())
-
-      if (hasAccess) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
-      }
-    }
+  // Já tem assinatura e está em /planos → dashboard
+  if (hasAccess && isPlanosRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse
