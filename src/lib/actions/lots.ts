@@ -103,3 +103,14 @@ export async function createEvent(data: {
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/lots')
 }
+
+export async function getLotById(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('lots')
+    .select('*, property:properties(*), area:areas(*), events(*)')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
