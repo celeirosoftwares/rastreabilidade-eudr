@@ -1,77 +1,59 @@
 'use server'
-// src/lib/actions/areas.ts
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import type { AreaFormData, Area } from '@/types'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
-export async function getAreas(propertyId?: string): Promise<Area[]> {
+async function verifySubscription() {
   const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Não autenticado')
 
-  let query = supabase
-    .from('areas')
-    .select('*, property:properties(name)')
-    .order('created_at', { ascending: false })
+  const { data: user } = await supabase
+    .from('users').select('organization_id').eq('id', session.user.id).single()
+  if (!user?.organization_id) throw new Error('Organização não encontrada')
 
-  if (propertyId) query = query.eq('property_id', propertyId)
-
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
-  return data ?? []
-}
-
-export async function getAreaById(id: string): Promise<Area | null> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('areas')
-    .select('*, property:properties(*)')
-    .eq('id', id)
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('subscription_status, subscription_ends_at')
+    .eq('id', user.organization_id)
     .single()
 
-  if (error) return null
-  return data
+  const status = org?.subscription_status
+  const endsAt = org?.subscription_ends_at
+  const hasAccess =
+    status === 'active' ||
+    (status === 'canceling' && endsAt && new Date(endsAt) > new Date())
+
+  if (!hasAccess) throw new Error('Assinatura necessária')
+  return supabase
 }
 
-export async function createArea(formData: AreaFormData) {
-  const supabase = createClient()
+export async function createArea(data: {
+  name: string
+  property_id: string
+  geojson: any
+  size_hectares: number
+  land_use: string
+}) {
+  const supabase = await verifySubscription()
 
-  const { data, error } = await supabase
-    .from('areas')
-    .insert(formData)
-    .select()
-    .single()
+  const { error } = await supabase.from('areas').insert({
+    name: data.name,
+    property_id: data.property_id,
+    geojson: data.geojson,
+    size_hectares: data.size_hectares,
+    land_use: data.land_use,
+  })
 
   if (error) throw new Error(error.message)
-
   revalidatePath('/dashboard/areas')
-  revalidatePath(`/dashboard/properties/${formData.property_id}`)
-  return data
+  redirect('/dashboard/areas')
 }
 
-export async function updateArea(id: string, formData: Partial<AreaFormData>) {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('areas')
-    .update(formData)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
-
-  revalidatePath('/dashboard/areas')
-  revalidatePath(`/dashboard/areas/${id}`)
-  return data
-}
-
-export async function deleteArea(id: string, propertyId: string) {
-  const supabase = createClient()
-
+export async function deleteArea(id: string) {
+  const supabase = await verifySubscription()
   const { error } = await supabase.from('areas').delete().eq('id', id)
   if (error) throw new Error(error.message)
-
   revalidatePath('/dashboard/areas')
-  revalidatePath(`/dashboard/properties/${propertyId}`)
 }

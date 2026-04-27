@@ -7,41 +7,53 @@ import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    async function loadUser() {
+    async function load() {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.replace('/auth/login'); return }
+      if (!session) { router.push('/auth/login'); return }
 
-      const { data: profile } = await supabase
-        .from('users').select('*, organization:organizations(*)')
-        .eq('id', session.user.id).single()
+      const { data } = await supabase
+        .from('users')
+        .select('*, organization:organizations(*)')
+        .eq('id', session.user.id)
+        .single()
 
-      setUser(profile ?? {
-        id: session.user.id, name: session.user.email ?? 'Usuário',
-        email: session.user.email ?? '', role: 'owner', organization_id: '',
-        created_at: new Date().toISOString(),
-        organization: { name: 'Minha Organização', id: '', created_at: '' },
-      })
+      if (!data) { router.push('/auth/login'); return }
+
+      // Verificar assinatura
+      const status = data.organization?.subscription_status
+      const endsAt = data.organization?.subscription_ends_at
+      const hasAccess =
+        status === 'active' ||
+        (status === 'canceling' && endsAt && new Date(endsAt) > new Date())
+
+      if (!hasAccess) {
+        router.push('/planos')
+        return
+      }
+
+      setUser(data)
       setLoading(false)
     }
-    loadUser()
+    load()
   }, [])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      minHeight: '100vh', background: 'var(--bg-base)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
       <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Carregando...</div>
     </div>
   )
 
-  if (!user) return null
-
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-base)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg-base)' }}>
       <Sidebar user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <TopBar user={user} />
