@@ -29,9 +29,29 @@ async function verifySubscription() {
   return supabase
 }
 
+export async function getProperties() {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function getProperty(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*, areas(*), lots(*)')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function createProperty(formData: FormData) {
   const supabase = await verifySubscription()
-
   const { data: { session } } = await supabase.auth.getSession()
   const { data: user } = await supabase
     .from('users').select('organization_id').eq('id', session!.user.id).single()
@@ -53,7 +73,6 @@ export async function createProperty(formData: FormData) {
 
 export async function updateProperty(id: string, formData: FormData) {
   const supabase = await verifySubscription()
-
   const { error } = await supabase.from('properties').update({
     name: formData.get('name') as string,
     owner_name: formData.get('owner_name') as string,

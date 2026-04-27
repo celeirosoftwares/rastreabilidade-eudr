@@ -29,6 +29,27 @@ async function verifySubscription() {
   return supabase
 }
 
+export async function getAreas() {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('areas')
+    .select('*, property:properties(name)')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function getArea(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('areas')
+    .select('*, property:properties(name)')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function createArea(data: {
   name: string
   property_id: string
@@ -37,7 +58,6 @@ export async function createArea(data: {
   land_use: string
 }) {
   const supabase = await verifySubscription()
-
   const { error } = await supabase.from('areas').insert({
     name: data.name,
     property_id: data.property_id,
@@ -45,7 +65,6 @@ export async function createArea(data: {
     size_hectares: data.size_hectares,
     land_use: data.land_use,
   })
-
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/areas')
   redirect('/dashboard/areas')

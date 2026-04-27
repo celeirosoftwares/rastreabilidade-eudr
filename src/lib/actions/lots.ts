@@ -29,6 +29,27 @@ async function verifySubscription() {
   return supabase
 }
 
+export async function getLots() {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('lots')
+    .select('*, property:properties(name), area:areas(name)')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function getLot(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('lots')
+    .select('*, property:properties(*), area:areas(*), events(*)')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function createLot(data: {
   property_id: string
   area_id?: string
@@ -37,7 +58,6 @@ export async function createLot(data: {
   metadata?: any
 }) {
   const supabase = await verifySubscription()
-
   const { error } = await supabase.from('lots').insert({
     property_id: data.property_id,
     area_id: data.area_id || null,
@@ -46,7 +66,6 @@ export async function createLot(data: {
     metadata: data.metadata || {},
     status: 'active',
   })
-
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/lots')
   redirect('/dashboard/lots')
@@ -54,7 +73,6 @@ export async function createLot(data: {
 
 export async function updateLot(id: string, data: any) {
   const supabase = await verifySubscription()
-
   const { error } = await supabase.from('lots').update(data).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/lots')
@@ -75,7 +93,6 @@ export async function createEvent(data: {
   metadata?: any
 }) {
   const supabase = await verifySubscription()
-
   const { error } = await supabase.from('events').insert({
     lot_id: data.lot_id,
     type: data.type,
@@ -83,7 +100,6 @@ export async function createEvent(data: {
     date: data.date,
     metadata: data.metadata || {},
   })
-
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard/lots')
 }
