@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Celeiro Agro | Rastreabilidade EUDR para Produtores Exportadores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --verde:#1C3A2A;--verde2:#2D5A3D;--verde3:#4A7C59;
+    --terra:#8B5E3C;--terra2:#C4956A;
+    --palha:#F5EDD6;--creme:#EDE0C4;--branco:#FDFAF4;
+    --texto:#1A2E1E;--suave:#5A6E5F;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'DM Sans',sans-serif;background:var(--branco);color:var(--texto);overflow-x:hidden}
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 5%;background:rgba(28,58,42,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(196,149,106,.15)}
+  .logo{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:700;color:var(--palha)}
+  .logo span{color:var(--terra2)}
+  .btn-nav{font-size:.8rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--palha);background:var(--verde2);padding:.55rem 1.3rem;border-radius:4px;text-decoration:none;transition:background .2s}
+  .btn-nav:hover{background:var(--verde3)}
+  .hero{min-height:100vh;display:flex;align-items:center;padding:8rem 5% 5rem;position:relative;overflow:hidden}
+  .hero-img{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1800&q=85&auto=format&fit=crop');background-size:cover;background-position:center 40%;filter:brightness(.35) saturate(.8)}
+  .hero-overlay{position:absolute;inset:0;background:linear-gradient(105deg,rgba(28,58,42,.85) 0%,rgba(28,58,42,.5) 60%,rgba(28,58,42,.2) 100%)}
+  .hero-inner{position:relative;z-index:2;max-width:900px}
+  .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(196,149,106,.18);border:1px solid rgba(196,149,106,.4);color:var(--terra2);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.4rem .9rem;border-radius:100px;margin-bottom:2rem;animation:fadeUp .5s ease both}
+  .hero-badge::before{content:'';width:5px;height:5px;background:var(--terra2);border-radius:50%;animation:blink 2s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2.6rem,5.5vw,4.4rem);font-weight:900;line-height:1.08;color:var(--palha);margin-bottom:2rem;animation:fadeUp .6s .1s ease both}
+  .hero h1 em{font-style:normal;color:var(--terra2)}
+  .hero-sub{font-size:1.05rem;font-weight:300;line-height:1.75;color:rgba(245,237,214,.75);max-width:560px;margin-bottom:2.5rem;animation:fadeUp .6s .2s ease both}
+  .hero-btns{display:flex;flex-wrap:wrap;gap:.9rem;animation:fadeUp .6s .3s ease both}
+  .btn-primary{display:inline-flex;align-items:center;gap:.4rem;background:var(--verde);color:var(--palha);font-weight:700;font-size:.98rem;padding:.95rem 1.9rem;border-radius:5px;text-decoration:none;box-shadow:0 4px 20px rgba(28,58,42,.3);transition:background .2s,transform .15s,box-shadow .2s}
+  .btn-primary:hover{background:var(--verde2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(28,58,42,.4)}
+  .btn-ghost{display:inline-flex;align-items:center;gap:.4rem;color:rgba(245,237,214,.75);font-size:.98rem;font-weight:400;padding:.95rem 1.4rem;border-radius:5px;text-decoration:none;border:1px solid rgba(245,237,214,.2);transition:border-color .2s,color .2s}
+  .btn-ghost:hover{border-color:rgba(245,237,214,.5);color:var(--palha)}
+  .ticker{background:var(--terra2);color:var(--verde);padding:.65rem 0;overflow:hidden;white-space:nowrap}
+  .ticker-inner{display:inline-flex;animation:ticker 24s linear infinite}
+  .ticker-item{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:0 2.2rem;border-right:1px solid rgba(28,58,42,.2)}
+  @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .stat-strip{background:var(--verde);display:grid;grid-template-columns:repeat(3,1fr);gap:1px}
+  @media(max-width:640px){.stat-strip{grid-template-columns:1fr}}
+  .stat-block{padding:3rem 2.5rem;background:rgba(255,255,255,.02);border-right:1px solid rgba(245,237,214,.05)}
+  .stat-block:last-child{border-right:none}
+  .stat-big{font-family:'Playfair Display',serif;font-size:clamp(3.5rem,7vw,6rem);font-weight:900;color:var(--terra2);line-height:1;display:block}
+  .stat-desc{font-size:.8rem;line-height:1.5;color:rgba(245,237,214,.4);margin-top:.6rem;max-width:170px}
+  .stag{font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--terra);display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem}
+  .stag::before{content:'';width:20px;height:2px;background:var(--terra)}
+  .efrase{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,4.5vw,4rem);font-weight:900;line-height:1.1;color:var(--verde);max-width:780px;margin-bottom:2rem}
+  .efrase em{font-style:italic;color:var(--terra)}
+  .efrase .sub{display:block;font-size:clamp(.95rem,1.8vw,1.2rem);font-weight:300;font-style:normal;color:var(--suave);margin-top:.8rem;font-family:'DM Sans',sans-serif;line-height:1.65}
+  .section-dor{background:var(--creme);padding:6rem 5%}
+  .dor-layout{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:start;margin-top:3rem}
+  @media(max-width:768px){.dor-layout{grid-template-columns:1fr}}
+  .dor-img{border-radius:4px;overflow:hidden;position:relative}
+  .dor-img img{width:100%;display:block;height:480px;object-fit:cover;filter:saturate(.85)}
+  .dor-img-label{position:absolute;bottom:0;left:0;right:0;padding:1.2rem 1.5rem;background:linear-gradient(to top,rgba(28,58,42,.9),transparent);color:var(--palha);font-size:.8rem;font-weight:600}
+  .dor-lista{display:flex;flex-direction:column;gap:1.4rem}
+  .dor-item{display:flex;gap:1rem;align-items:flex-start;padding:1.4rem;background:var(--branco);border-radius:6px;border-left:3px solid var(--terra)}
+  .dor-icon{font-size:1.4rem;flex-shrink:0;margin-top:.1rem}
+  .dor-item h4{font-size:.9rem;font-weight:700;color:var(--verde);margin-bottom:.3rem}
+  .dor-item p{font-size:.82rem;line-height:1.55;color:var(--suave)}
+  .section-como{padding:6rem 5%;background:var(--branco)}
+  .como-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;margin-top:3rem}
+  @media(max-width:900px){.como-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:500px){.como-grid{grid-template-columns:1fr}}
+  .como-card{display:flex;flex-direction:column;gap:.8rem}
+  .como-num{font-family:'Playfair Display',serif;font-size:3.5rem;font-weight:900;color:var(--creme);line-height:1}
+  .como-card h3{font-size:.95rem;font-weight:700;color:var(--verde)}
+  .como-card p{font-size:.82rem;line-height:1.6;color:var(--suave)}
+  .section-feat{background:var(--verde);padding:6rem 5%}
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem}
+  @media(max-width:900px){.feat-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:500px){.feat-grid{grid-template-columns:1fr}}
+  .feat-card{padding:1.8rem;border:1px solid rgba(245,237,214,.08);border-radius:6px;background:rgba(255,255,255,.03);transition:background .2s,border-color .2s}
+  .feat-card:hover{background:rgba(255,255,255,.06);border-color:rgba(196,149,106,.2)}
+  .feat-icon{font-size:1.5rem;margin-bottom:1rem}
+  .feat-card h3{font-size:.92rem;font-weight:700;color:var(--palha);margin-bottom:.5rem}
+  .feat-card p{font-size:.8rem;line-height:1.6;color:rgba(245,237,214,.45)}
+  .section-eudr{padding:6rem 5%;background:var(--creme)}
+  .eudr-layout{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;margin-top:3rem}
+  @media(max-width:768px){.eudr-layout{grid-template-columns:1fr}}
+  .eudr-doc{background:var(--branco);border-radius:6px;padding:2rem;box-shadow:0 8px 40px rgba(28,58,42,.08);border:1px solid rgba(28,58,42,.06)}
+  .eudr-doc-header{border-bottom:3px solid var(--verde);padding-bottom:1rem;margin-bottom:1rem;text-align:center}
+  .eudr-doc-header small{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--verde3);display:block;margin-bottom:.4rem}
+  .eudr-doc-header h4{font-size:.95rem;font-weight:700;color:var(--verde)}
+  .eudr-doc-header p{font-size:.72rem;color:var(--suave);margin-top:.2rem}
+  .eudr-id{display:inline-block;margin-top:.6rem;padding:.25rem .8rem;background:#f0f7f0;border:1px solid var(--verde3);border-radius:3px;font-size:.65rem;color:var(--verde);font-weight:700;font-family:monospace}
+  .eudr-section{background:var(--verde);color:var(--palha);padding:.3rem .7rem;font-size:.65rem;font-weight:700;letter-spacing:.05em;margin:.8rem 0 .4rem}
+  .eudr-row{display:flex;gap:.5rem;padding:.25rem 0;border-bottom:1px solid rgba(28,58,42,.06);font-size:.72rem}
+  .eudr-row span:first-child{font-weight:700;min-width:120px;color:var(--suave);flex-shrink:0}
+  .eudr-check{font-size:.72rem;color:var(--verde);padding:.2rem 0;display:flex;align-items:center;gap:.4rem}
+  .eudr-lista{display:flex;flex-direction:column;gap:1.2rem}
+  .eudr-item{display:flex;gap:1rem;align-items:flex-start}
+  .eudr-check-icon{width:24px;height:24px;background:rgba(74,124,89,.12);border:1px solid rgba(74,124,89,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;margin-top:.1rem}
+  .eudr-item h4{font-size:.88rem;font-weight:700;color:var(--verde);margin-bottom:.2rem}
+  .eudr-item p{font-size:.8rem;line-height:1.5;color:var(--suave)}
+  .section-prova{padding:6rem 5%;background:var(--branco)}
+  .prova-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem}
+  @media(max-width:900px){.prova-grid{grid-template-columns:1fr}}
+  .depo-card{padding:2rem;border:1px solid rgba(28,58,42,.08);border-radius:6px;background:var(--branco);display:flex;flex-direction:column;gap:1.2rem}
+  .depo-aspas{font-family:'Playfair Display',serif;font-size:3rem;color:var(--terra2);line-height:.8}
+  .depo-texto{font-size:.88rem;line-height:1.7;color:var(--suave);font-style:italic}
+  .depo-autor{display:flex;align-items:center;gap:.8rem}
+  .depo-avatar{width:40px;height:40px;border-radius:50%;background:var(--verde3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .depo-nome{font-size:.82rem;font-weight:700;color:var(--verde)}
+  .depo-cargo{font-size:.75rem;color:var(--suave)}
+  .section-preco{padding:6rem 5%;background:var(--creme);display:flex;flex-direction:column;align-items:center}
+  .faq-section{padding:6rem 5%;background:var(--branco)}
+  .faq-layout{display:grid;grid-template-columns:1fr 1.6fr;gap:5rem;margin-top:3rem}
+  @media(max-width:768px){.faq-layout{grid-template-columns:1fr}}
+  .faq-sticky{position:sticky;top:6rem}
+  .faq-img{margin-top:2rem;border-radius:4px;overflow:hidden}
+  .faq-img img{width:100%;height:260px;object-fit:cover;filter:saturate(.8)}
+  .faq{border-bottom:1px solid rgba(28,58,42,.1);padding:1.3rem 0}
+  .faq summary{font-size:.92rem;font-weight:600;color:var(--verde);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:1rem}
+  .faq summary::after{content:'＋';font-size:1.2rem;color:var(--terra2);flex-shrink:0}
+  .faq[open] summary::after{content:'－'}
+  .faq-body{font-size:.85rem;line-height:1.7;color:var(--suave);padding-top:.9rem}
+  .cta-final{position:relative;padding:8rem 5%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .cta-bg{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800&q=85&auto=format&fit=crop');background-size:cover;background-position:center;filter:brightness(.25) saturate(.6)}
+  .cta-overlay{position:absolute;inset:0;background:rgba(28,58,42,.7)}
+  .cta-inner{position:relative;z-index:2;text-align:center;max-width:700px}
+  .cta-tagline{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--terra2);display:block;margin-bottom:1.5rem}
+  .cta-titulo{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,5vw,4rem);font-weight:900;line-height:1.08;color:var(--palha);margin-bottom:1.5rem}
+  .cta-titulo em{font-style:italic;color:var(--terra2)}
+  .cta-sub{font-size:.95rem;font-weight:300;line-height:1.75;color:rgba(245,237,214,.7);margin-bottom:2.5rem}
+  .cta-nota{font-size:.78rem;color:rgba(245,237,214,.4);margin-top:1.2rem}
+  footer{background:var(--verde);padding:2.5rem 5%;display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between}
+  footer p{font-size:.78rem;color:rgba(245,237,214,.35)}
+  .reveal{opacity:0;transform:translateY(20px);transition:opacity .55s ease,transform .55s ease}
+  .reveal.on{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Celeiro<span>.</span></div>
+  <a href="https://www.rastreio-agro.online/auth/login" class="btn-nav">Entrar na plataforma</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-img"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-inner">
+    <div class="hero-badge">Regulamento (UE) 2023/1115 — EUDR</div>
+    <h1>Sua fazenda<br>pronta para <em>exportar</em><br>para a Europa.</h1>
+    <p class="hero-sub">Rastreabilidade agrícola completa, georreferenciamento via Google Maps e geração automática do DDS — o documento que a União Europeia vai exigir de todo produtor exportador.</p>
+    <div class="hero-btns">
+      <a href="https://www.rastreio-agro.online/auth/login" class="btn-primary">Começar agora →</a>
+      <a href="#como" class="btn-ghost">Ver como funciona</a>
+    </div>
+  </div>
+</section>
+
+<div class="ticker">
+  <div class="ticker-inner">
+    <span class="ticker-item">Conformidade EUDR</span>
+    <span class="ticker-item">Georreferenciamento via Google Maps</span>
+    <span class="ticker-item">DDS em PDF</span>
+    <span class="ticker-item">Verificação pública</span>
+    <span class="ticker-item">Cadeia de custódia</span>
+    <span class="ticker-item">GeoJSON padrão UE</span>
+    <span class="ticker-item">Conformidade EUDR</span>
+    <span class="ticker-item">Georreferenciamento via Google Maps</span>
+    <span class="ticker-item">DDS em PDF</span>
+    <span class="ticker-item">Verificação pública</span>
+    <span class="ticker-item">Cadeia de custódia</span>
+    <span class="ticker-item">GeoJSON padrão UE</span>
+  </div>
+</div>
+
+<div class="stat-strip">
+  <div class="stat-block">
+    <span class="stat-big">30min</span>
+    <p class="stat-desc">Para gerar o primeiro DDS depois do cadastro</p>
+  </div>
+  <div class="stat-block">
+    <span class="stat-big">12</span>
+    <p class="stat-desc">Campos obrigatórios do Artigo 4 preenchidos automaticamente</p>
+  </div>
+  <div class="stat-block">
+    <span class="stat-big">100%</span>
+    <p class="stat-desc">Dos dados exportados em GeoJSON, formato exigido pela UE</p>
+  </div>
+</div>
+
+<section class="section-dor" id="problema">
+  <div class="stag">O problema</div>
+  <div class="efrase">Exportar para a Europa ficou <em>mais difícil.</em>
+    <span class="sub">O Regulamento (UE) 2023/1115 exige prova documental de que sua produção não causou desmatamento após 31 de dezembro de 2020. Sem isso, o produto não entra na Europa.</span>
+  </div>
+  <div class="dor-layout">
+    <div class="dor-img reveal">
+      <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80&auto=format&fit=crop" alt="Fazenda vista de cima"/>
+      <div class="dor-img-label">Cada polígono precisa de coordenadas precisas em GeoJSON</div>
+    </div>
+    <div class="dor-lista">
+      <div class="dor-item reveal">
+        <div class="dor-icon">📋</div>
+        <div><h4>Documentação técnica obrigatória</h4><p>O DDS exige 12 campos específicos: dados do operador, geolocalização, GeoJSON, cadeia de custódia, avaliação de risco e assinatura digital.</p></div>
+      </div>
+      <div class="dor-item reveal">
+        <div class="dor-icon">🗺️</div>
+        <div><h4>Georreferenciamento preciso</h4><p>As áreas precisam ser registradas com polígonos em GeoJSON. Não adianta endereço ou coordenada simples — a UE quer o polígono completo.</p></div>
+      </div>
+      <div class="dor-item reveal">
+        <div class="dor-icon">🔍</div>
+        <div><h4>Verificação por compradores europeus</h4><p>Importadores, certificadoras e autoridades vão verificar a autenticidade dos documentos antes de fechar qualquer negócio.</p></div>
+      </div>
+      <div class="dor-item reveal">
+        <div class="dor-icon">⏱️</div>
+        <div><h4>Prazo se aproximando</h4><p>Grandes operadores já estão em conformidade. Médios e pequenos têm prazo até meados de 2026 — mas a documentação leva tempo para organizar.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-como" id="como">
+  <div class="stag">Como funciona</div>
+  <div class="efrase">Do cadastro ao DDS <em>em 4 passos.</em></div>
+  <div class="como-grid">
+    <div class="como-card reveal">
+      <div class="como-num">01</div>
+      <h3>Cadastre a propriedade</h3>
+      <p>Preencha dados do produtor, número do CAR, município e estado. Vincula todas as áreas e lotes.</p>
+    </div>
+    <div class="como-card reveal">
+      <div class="como-num">02</div>
+      <h3>Delimite as áreas no mapa</h3>
+      <p>Desenhe os polígonos direto no Google Maps com imagens de satélite. Busque o endereço para navegar rápido.</p>
+    </div>
+    <div class="como-card reveal">
+      <div class="como-num">03</div>
+      <h3>Crie os lotes e eventos</h3>
+      <p>Registre plantio, colheita, transporte e processamento. Cadeia de custódia completa e auditável.</p>
+    </div>
+    <div class="como-card reveal">
+      <div class="como-num">04</div>
+      <h3>Gere o DDS e compartilhe</h3>
+      <p>Baixe o PDF com os 12 campos da regulação e envie o link de verificação para o comprador europeu.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section-feat" id="funcionalidades">
+  <div class="stag" style="color:var(--terra2)">Plataforma completa</div>
+  <div class="efrase" style="color:var(--palha);max-width:680px">Tudo que você precisa <em>em um só lugar.</em></div>
+  <div class="feat-grid">
+    <div class="feat-card reveal"><div class="feat-icon">🗺️</div><h3>Google Maps com satélite</h3><p>Desenhe polígonos com imagens atualizadas. Busque fazendas e municípios pelo nome.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">🏡</div><h3>Gestão de propriedades</h3><p>CAR, dados do produtor, município, estado. Múltiplas propriedades por organização.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">📦</div><h3>Controle de lotes</h3><p>Café, soja, cana, milho e algodão. Campos específicos para cada cultura.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">📅</div><h3>Linha do tempo completa</h3><p>Plantio, colheita, transporte, processamento e venda. Cadeia de custódia auditável.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">📄</div><h3>Relatório EUDR automático</h3><p>Checklist de conformidade com percentual. Veja o status de cada requisito.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">🔏</div><h3>DDS em PDF</h3><p>12 campos do Artigo 4 preenchidos automaticamente com seus dados reais.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">🔗</div><h3>Link de verificação público</h3><p>Cada DDS tem um link único e permanente. Compradores verificam sem precisar de conta.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">📍</div><h3>GeoJSON padrão UE</h3><p>Exportação automática no formato exigido pelas autoridades europeias.</p></div>
+    <div class="feat-card reveal"><div class="feat-icon">🏢</div><h3>Multi-tenant</h3><p>Ideal para cooperativas e tradings que gerenciam múltiplos produtores.</p></div>
+  </div>
+</section>
+
+<section class="section-eudr" id="eudr">
+  <div class="stag">Due Diligence Statement</div>
+  <div class="efrase">O documento que <em>a Europa exige.</em></div>
+  <div class="eudr-layout">
+    <div class="eudr-doc reveal">
+      <div class="eudr-doc-header">
+        <small>Regulamento da União Europeia sobre Desmatamento</small>
+        <h4>DECLARAÇÃO DE DEVIDA DILIGÊNCIA</h4>
+        <p>Regulamento (UE) 2023/1115 — Artigo 4</p>
+        <div class="eudr-id">VERIFY-CAF-2026-K9XM2R</div>
+      </div>
+      <div class="eudr-section">1. INFORMAÇÕES DO OPERADOR</div>
+      <div class="eudr-row"><span>Organização:</span><span>Fazenda Boa Esperança</span></div>
+      <div class="eudr-row"><span>Responsável:</span><span>João da Silva</span></div>
+      <div class="eudr-section">4. GEOLOCALIZAÇÃO</div>
+      <div class="eudr-row"><span>Propriedade:</span><span>Fazenda Boa Vista</span></div>
+      <div class="eudr-row"><span>CAR:</span><span>MG-3150570-XXX</span></div>
+      <div class="eudr-row"><span>Área:</span><span>12.5400 hectares</span></div>
+      <div class="eudr-section">6. DECLARAÇÃO DE DESMATAMENTO</div>
+      <div class="eudr-check">✅ Nenhum desmatamento detectado após 31/12/2020</div>
+      <div class="eudr-section">8. AVALIAÇÃO DE RISCO</div>
+      <div class="eudr-row"><span>Classificação:</span><span style="color:#2d6a2d;font-weight:bold">BAIXO</span></div>
+    </div>
+    <div class="eudr-lista">
+      <div class="eudr-item reveal">
+        <div class="eudr-check-icon">✓</div>
+        <div><h4>12 seções obrigatórias</h4><p>Todas preenchidas automaticamente com seus dados reais do cadastro.</p></div>
+      </div>
+      <div class="eudr-item reveal">
+        <div class="eudr-check-icon">✓</div>
+        <div><h4>ID único de verificação</h4><p>Código permanente para verificação pública da autenticidade do documento.</p></div>
+      </div>
+      <div class="eudr-item reveal">
+        <div class="eudr-check-icon">✓</div>
+        <div><h4>GeoJSON incluído</h4><p>Coordenadas do polígono exportadas no formato padrão exigido pela UE.</p></div>
+      </div>
+      <div class="eudr-item reveal">
+        <div class="eudr-check-icon">✓</div>
+        <div><h4>Download em PDF</h4><p>Pronto para enviar ao comprador, certificadora ou autoridade europeia.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-prova">
+  <div class="stag">Quem usa</div>
+  <div class="efrase">Produtores que já <em>estão prontos.</em></div>
+  <div class="prova-grid">
+    <div class="depo-card reveal">
+      <div class="depo-aspas">"</div>
+      <p class="depo-texto">Tentei montar a documentação EUDR manualmente e levei semanas. Com a Celeiro fiz tudo em um dia — propriedade, área no mapa e DDS gerado.</p>
+      <div class="depo-autor">
+        <div class="depo-avatar">👨‍🌾</div>
+        <div><div class="depo-nome">Carlos Mendes</div><div class="depo-cargo">Cafeicultor — Patrocínio, MG</div></div>
+      </div>
+    </div>
+    <div class="depo-card reveal">
+      <div class="depo-aspas">"</div>
+      <p class="depo-texto">O link de verificação foi o diferencial. Meu comprador na Holanda verificou o documento sem precisar me ligar. Profissionalismo total.</p>
+      <div class="depo-autor">
+        <div class="depo-avatar">👩‍💼</div>
+        <div><div class="depo-nome">Ana Paula Rodrigues</div><div class="depo-cargo">Exportadora de café — Franca, SP</div></div>
+      </div>
+    </div>
+    <div class="depo-card reveal">
+      <div class="depo-aspas">"</div>
+      <p class="depo-texto">Gerenciamos 12 produtores. A Celeiro nos permite gerar os DDS de todos em minutos, com dados completamente isolados por produtor.</p>
+      <div class="depo-autor">
+        <div class="depo-avatar">🏢</div>
+        <div><div class="depo-nome">Roberto Faria</div><div class="depo-cargo">Cooperativa Agrocafé — Sul de Minas</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-preco" id="preco">
+  <div class="stag">Plano único</div>
+  <div class="efrase" style="text-align:center;max-width:600px;margin-left:auto;margin-right:auto">Um plano. <em>Tudo incluído.</em></div>
+  <div style="max-width:480px;width:100%;background:var(--branco);border-radius:12px;padding:2.5rem;box-shadow:0 8px 40px rgba(28,58,42,.1);border:2px solid var(--verde2);position:relative;margin-top:1rem">
+    <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--terra2);color:var(--verde);font-size:.7rem;font-weight:800;padding:5px 16px;border-radius:100px;text-transform:uppercase;letter-spacing:1px">Preço de lançamento</div>
+    <div style="text-align:center">
+      <h3 style="font-size:1.1rem;font-weight:700;color:var(--verde);margin-bottom:.3rem">Celeiro Agro</h3>
+      <p style="font-size:.82rem;color:var(--suave)">Rastreabilidade EUDR completa para o produtor exportador</p>
+      <div style="font-size:3rem;font-weight:900;color:var(--verde);margin:1.5rem 0 .3rem;font-family:'Playfair Display',serif">R$ 397<span style="font-size:.9rem;font-weight:400;color:var(--suave)">/mês</span></div>
+      <p style="font-size:.78rem;color:var(--suave);margin-bottom:2rem">Propriedades ilimitadas · Áreas ilimitadas · DDS ilimitados</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.7rem;margin-bottom:2rem">
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Georreferenciamento via Google Maps com satélite</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Gestão de propriedades com CAR e dados do produtor</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Controle de lotes por cultura (café, soja, cana, milho, algodão)</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Linha do tempo: plantio, colheita, transporte, processamento, venda</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Relatório EUDR com checklist automático de conformidade</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> DDS em PDF com os 12 campos exigidos pela regulação</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Link de verificação público para compradores e certificadoras</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Exportação GeoJSON no padrão internacional da UE</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Atualização regulatória inclusa na assinatura</div>
+      <div style="font-size:.82rem;color:var(--verde);padding-left:1.5rem;position:relative;line-height:1.5"><span style="position:absolute;left:0;color:var(--verde3)">✓</span> Suporte humano em português</div>
+      <div style="margin-top:.5rem;padding-top:.8rem;border-top:1px solid rgba(28,58,42,.08)">
+        <div style="font-size:.75rem;font-weight:700;color:var(--terra);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Em breve (incluso na assinatura)</div>
+        <div style="font-size:.8rem;color:var(--suave);line-height:1.6">Gestão de campo completa · CRM Agro · Simulação de Preço e Margem · Gestão de Safristas · Conformidade Fiscal · Cacau, pecuária e madeira</div>
+      </div>
+    </div>
+    <a href="https://www.rastreio-agro.online/auth/login" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;padding:1rem 2rem;border-radius:8px;background:var(--verde);color:var(--palha)">Quero começar agora →</a>
+    <p style="text-align:center;font-size:.78rem;color:var(--suave);margin-top:.8rem">Cancela quando quiser. Sem fidelidade.</p>
+    <p style="text-align:center;font-size:.76rem;color:var(--suave);margin-top:1.2rem;padding-top:1rem;border-top:1px solid rgba(28,58,42,.06)">Operação grande? <a href="https://wa.me/5531900000000" style="color:var(--terra);font-weight:700;text-decoration:none">Fale com a equipe</a> e montamos um plano para a sua fazenda.</p>
+  </div>
+</section>
+
+<section class="faq-section" id="faq">
+  <div class="stag">Dúvidas frequentes</div>
+  <div class="faq-layout">
+    <div class="faq-sticky reveal">
+      <div class="efrase" style="font-size:clamp(1.8rem,3vw,2.8rem)">Perguntas que todo produtor faz<br><em>antes de decidir.</em></div>
+      <p>Se a resposta não está aqui, fale com a equipe pelo WhatsApp.</p>
+      <a href="https://www.rastreio-agro.online/auth/login" class="btn-primary" style="margin-top:1.5rem;width:fit-content;font-size:.88rem;padding:.8rem 1.5rem;background:var(--verde);color:var(--palha)">Quero começar →</a>
+      <div class="faq-img">
+        <img src="https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=600&q=80&auto=format&fit=crop" alt="Produtor rural no campo" loading="lazy"/>
+      </div>
+    </div>
+    <div class="faq-list">
+      <details class="faq"><summary>Quanto tempo leva para gerar o primeiro DDS?</summary><div class="faq-body">Menos de 30 minutos. Você cadastra a propriedade, desenha os polígonos no Google Maps, cria os lotes com as culturas e gera o PDF. O sistema já preenche os 12 campos que a regulação exige.</div></details>
+      <details class="faq"><summary>O que é o link de verificação público?</summary><div class="faq-body">Cada DDS gerado recebe um código único e um link permanente. Qualquer comprador, certificadora ou autoridade europeia pode acessar esse link e verificar que o documento é autêntico, sem precisar de conta no sistema.</div></details>
+      <details class="faq"><summary>R$ 397/mês resolve rastreabilidade EUDR de verdade?</summary><div class="faq-body">Resolve. Georreferenciamento via Google Maps, exportação em GeoJSON, cadeia de custódia completa, DDS em PDF com os 12 campos do Artigo 4. A alternativa é uma consultoria de R$ 50 mil a R$ 150 mil que entrega a mesma documentação.</div></details>
+      <details class="faq"><summary>Quais culturas o sistema suporta?</summary><div class="faq-body">Café, soja, cana-de-açúcar, milho e algodão. Cada cultura tem campos específicos. Novas culturas (cacau, pecuária, madeira) entram conforme a demanda.</div></details>
+      <details class="faq"><summary>Serve para cooperativa que gerencia múltiplos produtores?</summary><div class="faq-body">Sim. O sistema é multi-tenant: cada produtor tem seus dados completamente isolados. Fale com a equipe para um plano sob medida.</div></details>
+      <details class="faq"><summary>Posso cancelar quando quiser?</summary><div class="faq-body">Pode. Sem fidelidade. Seus dados ficam armazenados. Os DDS já gerados e seus links de verificação continuam funcionando.</div></details>
+      <details class="faq"><summary>O sistema atualiza se a EUDR mudar as exigências?</summary><div class="faq-body">Sim. Atualização regulatória faz parte da assinatura. Quando a regulação muda, o sistema atualiza junto. Sem pagar extra.</div></details>
+      <details class="faq"><summary>Como funciona o georreferenciamento?</summary><div class="faq-body">Você desenha os polígonos das áreas direto no Google Maps com imagens de satélite atualizadas. O sistema calcula área em hectares, centróide e vértices automaticamente. Exporta em GeoJSON.</div></details>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="cta-bg"></div>
+  <div class="cta-overlay"></div>
+  <div class="cta-inner">
+    <span class="cta-tagline reveal">Dezembro de 2026</span>
+    <h2 class="cta-titulo reveal">O comprador europeu<br>não vai esperar você<br><em>se preparar.</em></h2>
+    <p class="cta-sub reveal">Cadastre a propriedade, delimite as áreas no Google Maps, gere o DDS. Menos de 30 minutos para o primeiro documento. R$ 397/mês. Cancela quando quiser.</p>
+    <a href="https://www.rastreio-agro.online/auth/login" class="btn-primary reveal" style="font-size:1.05rem;padding:1.1rem 2.4rem;background:var(--verde);color:var(--palha)">Quero começar agora →</a>
+    <p class="cta-nota reveal">Quem entra agora garante o preço de lançamento para todos os módulos futuros.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="logo">Celeiro<span>.</span></div>
+  <p>© 2026 Celeiro Software · CNPJ: 59.506.468/0001-03</p>
+</footer>
+
+<script>
+  const obs=new IntersectionObserver((e)=>{
+    e.forEach((el,i)=>{
+      if(el.isIntersecting){setTimeout(()=>el.target.classList.add('on'),i*70);obs.unobserve(el.target)}
+    })
+  },{threshold:.08});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
