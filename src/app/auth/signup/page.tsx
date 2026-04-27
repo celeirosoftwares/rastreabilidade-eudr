@@ -1,26 +1,19 @@
-// src/app/auth/signup/page.tsx
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Leaf, Loader2 } from 'lucide-react'
-import { signUp } from '@/lib/actions/auth'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    organizationName: '',
-  })
+  const [form, setForm] = useState({ name: '', orgName: '', email: '', password: '' })
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,109 +21,128 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const result = await signUp(form.email, form.password, form.name, form.organizationName)
+    const supabase = createClient()
 
-    if (result?.error) {
-      setError(result.error)
+    try {
+      // 1. Criar usuário no Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+      })
+      if (authError) throw new Error(authError.message)
+      if (!authData.user) throw new Error('Erro ao criar usuário')
+
+      // 2. Criar organização
+      const { data: org, error: orgError } = await supabase
+        .from('organizations')
+        .insert({ name: form.orgName, subscription_status: 'inactive' })
+        .select()
+        .single()
+      if (orgError) throw new Error(orgError.message)
+
+      // 3. Criar perfil do usuário
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: form.email,
+          name: form.name,
+          organization_id: org.id,
+          role: 'owner',
+        })
+      if (userError) throw new Error(userError.message)
+
+      // 4. Redirecionar direto para o Stripe Checkout
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error(data.error ?? 'Erro ao criar sessão de pagamento')
+      }
+    } catch (err: any) {
+      setError(err.message ?? 'Erro inesperado')
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1a0f] flex items-center justify-center px-4 py-8">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1a2e1a] via-[#0f1a0f] to-[#0a120a] pointer-events-none" />
-
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-10 h-10 bg-[#4caf50] rounded-lg flex items-center justify-center">
-              <Leaf className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-white tracking-tight">RastreiO</span>
-          </div>
-          <p className="text-[#6b8f6b] text-sm">Plataforma de Rastreabilidade EUDR</p>
+    <div style={{
+      minHeight: '100vh', background: '#0d0f0d',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: '24px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
+        <div style={{ width: '36px', height: '36px', background: '#5a9e5a', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Leaf size={18} color="white" />
         </div>
-
-        <div className="bg-[#172117] border border-[#2d3d2d] rounded-2xl p-8 shadow-2xl">
-          <h1 className="text-xl font-semibold text-white mb-1">Criar conta gratuita</h1>
-          <p className="text-[#6b8f6b] text-sm mb-6">Comece a rastrear sua produção hoje</p>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">Nome completo</label>
-              <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="João da Silva"
-                required
-                className="w-full bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-4 py-2.5 text-white placeholder-[#3d5a3d] focus:outline-none focus:border-[#4caf50] transition-colors text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">Nome da organização / fazenda</label>
-              <input
-                name="organizationName"
-                value={form.organizationName}
-                onChange={handleChange}
-                placeholder="Fazenda Boa Vista"
-                required
-                className="w-full bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-4 py-2.5 text-white placeholder-[#3d5a3d] focus:outline-none focus:border-[#4caf50] transition-colors text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">E-mail</label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="seu@email.com"
-                required
-                className="w-full bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-4 py-2.5 text-white placeholder-[#3d5a3d] focus:outline-none focus:border-[#4caf50] transition-colors text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#a0b8a0] mb-1.5">Senha</label>
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Mínimo 8 caracteres"
-                minLength={8}
-                required
-                className="w-full bg-[#0f1a0f] border border-[#2d3d2d] rounded-lg px-4 py-2.5 text-white placeholder-[#3d5a3d] focus:outline-none focus:border-[#4caf50] transition-colors text-sm"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#4caf50] hover:bg-[#43a047] text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {loading ? 'Criando conta...' : 'Criar conta'}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-[#6b8f6b] mt-6">
-            Já tem conta?{' '}
-            <Link href="/auth/login" className="text-[#4caf50] hover:text-[#66bb6a] font-medium">
-              Entrar
-            </Link>
-          </p>
-        </div>
+        <span style={{ color: 'white', fontWeight: 700, fontSize: '20px', fontFamily: 'sans-serif' }}>RastreiO</span>
       </div>
+
+      <div style={{ background: '#141614', border: '1px solid #1e221e', borderRadius: '16px', padding: '32px', maxWidth: '400px', width: '100%' }}>
+        <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 600, marginBottom: '6px', fontFamily: 'sans-serif' }}>
+          Criar conta
+        </h2>
+        <p style={{ color: '#4d7a4d', fontSize: '13px', marginBottom: '24px' }}>
+          Após o cadastro você será redirecionado para o pagamento (R$397/mês)
+        </p>
+
+        {error && (
+          <div style={{ marginBottom: '16px', padding: '10px 14px', background: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)', borderRadius: '8px', color: '#e74c3c', fontSize: '13px' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', color: '#7a8a7a', fontSize: '12px', marginBottom: '6px' }}>Seu nome</label>
+            <input name="name" value={form.name} onChange={handleChange} placeholder="João da Silva"
+              required style={{ width: '100%', background: '#0d0f0d', border: '1px solid #1e221e', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: '#7a8a7a', fontSize: '12px', marginBottom: '6px' }}>Nome da fazenda / organização</label>
+            <input name="orgName" value={form.orgName} onChange={handleChange} placeholder="Fazenda Boa Vista"
+              required style={{ width: '100%', background: '#0d0f0d', border: '1px solid #1e221e', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: '#7a8a7a', fontSize: '12px', marginBottom: '6px' }}>E-mail</label>
+            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="joao@fazenda.com.br"
+              required style={{ width: '100%', background: '#0d0f0d', border: '1px solid #1e221e', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: '#7a8a7a', fontSize: '12px', marginBottom: '6px' }}>Senha</label>
+            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Mínimo 6 caracteres"
+              required minLength={6} style={{ width: '100%', background: '#0d0f0d', border: '1px solid #1e221e', borderRadius: '8px', padding: '10px 14px', color: 'white', fontSize: '14px', outline: 'none' }} />
+          </div>
+
+          <button type="submit" disabled={loading} style={{
+            width: '100%', background: '#5a9e5a', color: 'white', border: 'none',
+            borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: 600,
+            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            marginTop: '4px', fontFamily: 'sans-serif'
+          }}>
+            {loading && <Loader2 size={16} />}
+            {loading ? 'Criando conta e redirecionando...' : 'Criar conta e assinar →'}
+          </button>
+        </form>
+
+        <p style={{ textAlign: 'center', fontSize: '12px', color: '#3d4d3d', marginTop: '20px' }}>
+          Já tem conta?{' '}
+          <Link href="/auth/login" style={{ color: '#5a9e5a', textDecoration: 'none' }}>Entrar</Link>
+        </p>
+      </div>
+
+      <p style={{ marginTop: '20px', fontSize: '11px', color: '#2d3d2d', textAlign: 'center' }}>
+        🔒 Pagamento seguro via Stripe · Cancele quando quiser
+      </p>
     </div>
   )
 }
